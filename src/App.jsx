@@ -21,7 +21,7 @@ const T = {
   ar: {
     dir: "rtl", lang: "العربية", other: "English",
     brand: "قِوام",
-    tagline: "المال باعتدال...\nوَالَّذِينَ إِذَا أَنفَقُوا لَمْ يُسْرِفُوا وَلَمْ يَقْتُرُوا وَكَانَ بَيْنَ ذَٰلِكَ قَوَامًا\nصدق الله العظيم\nوالمستقبل باستقلال",
+    tagline: "وَالَّذِينَ إِذَا أَنفَقُوا لَمْ يُسْرِفُوا وَلَمْ يَقْتُرُوا وَكَانَ بَيْنَ ذَٰلِكَ قَوَامًا\nصدق الله العظيم",
     loginTitle: "تسجيل الدخول", registerTitle: "إنشاء حساب جديد",
     name: "الاسم", email: "البريد الإلكتروني", password: "كلمة المرور",
     login: "دخول", register: "إنشاء الحساب", logout: "تسجيل الخروج",
@@ -460,7 +460,7 @@ function Auth({ t, lang, setLang, onLogin }) {
           <QiwamLogo size={46} />
           <div style={{ fontSize: 32, fontWeight: 700 }}>{t.brand}</div>
         </div>
-        <div style={{ fontSize: 14, opacity: 0.85, marginTop: 8, whiteSpace: "pre-line", textAlign: "center" }}>{t.tagline}</div>
+        <div style={{ fontSize: "clamp(16px, 2.5vw, 24px)", fontWeight: 700, opacity: 0.85, marginTop: 8, whiteSpace: "pre-line", textAlign: "center", lineHeight: 1.6, fontFamily: FONT }}>{t.tagline}</div>
       </div>
       <SaduBand />
       <div style={{ maxWidth: 440, width: "100%", margin: "36px auto", padding: "0 16px" }}>
