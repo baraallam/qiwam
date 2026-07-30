@@ -950,6 +950,36 @@ export default function App() {
   const daily = useMemo(() => { const n = daysIn(month); const perDay = Array.from({ length: n }, () => 0); monthTx.forEach((x) => { const dd = Number((x.date || "").slice(8, 10)); if (dd >= 1 && dd <= n) perDay[dd - 1] += num(x.amount); }); let cum = 0; const series = perDay.map((v, i) => { cum += v; return { day: i + 1, spent: Math.round(v), cum: Math.round(cum) }; }); const total = cum; const fixedSpent = monthTx.filter((x) => x.fixedId).reduce((a, x) => a + num(x.amount), 0); const elapsed = isCurrentMonth ? Math.max(1, todayDay) : n; const byCat = {}; monthTx.forEach((x) => { byCat[x.cat] = (byCat[x.cat] || 0) + num(x.amount); }); let topCat = null, topVal = 0; Object.entries(byCat).forEach(([k, v]) => { if (v > topVal) { topVal = v; topCat = k; } }); const topC = cats.find((c) => c.id === topCat); return { series, total, fixedSpent, variable: total - fixedSpent, avg: total / elapsed, topName: topC ? catName(topC, t) : "—", topVal }; }, [monthTx, month, cats, t, isCurrentMonth, todayDay]);
   const byDayList = useMemo(() => { const g = {}; monthTx.forEach((x) => { (g[x.date] = g[x.date] || []).push(x); }); return Object.entries(g).sort((a, b) => (a[0] < b[0] ? 1 : -1)); }, [monthTx]);
   const [quickCat, setQuickCat] = useState(null);
+  /* ==========================
+   Knowledge Base State
+========================== */
+
+const [kbQuery, setKbQuery] = useState("");
+const [kbFilter, setKbFilter] = useState("all");
+const [kbOpen, setKbOpen] = useState(null);
+
+const kbList = useMemo(() => {
+  return KB.filter((item) => {
+    const data = item[lang];
+
+    const search =
+      (
+        data.term +
+        " " +
+        data.body
+      ).toLowerCase();
+
+    const matchesSearch =
+      kbQuery.trim() === "" ||
+      search.includes(kbQuery.toLowerCase());
+
+    const matchesFilter =
+      kbFilter === "all" ||
+      item.kind === kbFilter;
+
+    return matchesSearch && matchesFilter;
+  });
+}, [kbQuery, kbFilter, lang]);
   const catSpentMap = useMemo(() => { const m = {}; monthTx.forEach((x) => { m[x.cat] = (m[x.cat] || 0) + num(x.amount); }); return m; }, [monthTx]);
   const monthIncome = num(d.incYou) + num(d.incSpouse) + num(d.incOther) + (d.customIncome || []).reduce((a, i) => a + num(i.amount), 0);
   const remainingM = monthIncome - daily.total;
