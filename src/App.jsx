@@ -18,14 +18,10 @@ const FONT = "'IBM Plex Sans Arabic', system-ui, sans-serif";
 /* ------------------------------------------------------------------ */
 /*  Supabase Client (Cloud Database & Auth)                            */
 /* ------------------------------------------------------------------ */
-const SUPABASE_URL = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_KEY = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-let supabase;
-try {
-  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-} catch (e) {
-  console.error("Supabase init failed:", e);
-}
+const supabase = createClient(
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL,
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 /* ------------------------------------------------------------------ */
 /*  Bilingual dictionary                                               */
@@ -247,14 +243,9 @@ const T = {
 /* ------------------------------------------------------------------ */
 /*  Helpers & Logic                                                    */
 /* ------------------------------------------------------------------ */
-const MEM = {};
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const fmt = (v, lang) => new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-US", { maximumFractionDigits: 0 }).format(Math.round(v));
 const pct = (v, lang) => new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-US", { maximumFractionDigits: 1 }).format(v) + "%";
-
-async function sGet(key) { try { const r = await window.storage.get(key, false); return r ? JSON.parse(r.value) : null; } catch { return MEM[key] || null; } }
-async function sSet(key, val) { MEM[key] = val; try { await window.storage.set(key, JSON.stringify(val), false); } catch (e) { console.error(e); } }
-async function sDel(key) { delete MEM[key]; try { await window.storage.delete(key, false); } catch {} }
 
 const DEFAULTS = {
   incYou: 15000, incSpouse: 0, incOther: 0,
@@ -295,9 +286,6 @@ const catIcon = (c) => (c.custom ? "🏷️" : CAT_ICONS[c.id] || "📦");
 const catName = (c, t) => (c.custom ? c.name || "—" : t[c.key] || c.id);
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-/* ------------------------------------------------------------------ */
-/*  Core Calculation Functions                                         */
-/* ------------------------------------------------------------------ */
 function daysInMonthOf(m) { return new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate(); }
 function reqMonthly(target, years, annualRet) {
   const n = Math.max(1, Math.round(years * 12));
@@ -374,6 +362,7 @@ function computeAll(d, expensesUsed, labels, t) {
   const debtFactor = d.debtInRetirement === "no" ? 0 : d.debtInRetirement === "yes" ? 1 : 0.4;
   const annualExpNow = (expenses + debtPay * debtFactor) * 12;
   const neededAtRetire = annualExpNow * Math.pow(1 + infl, yearsTo) * 25;
+  const atRetire = rows[rows.length - 1]?.nominal || 0; // [الحماية النهائية للمتغير]
   const readiness = neededAtRetire > 0 ? Math.min(150, (atRetire / neededAtRetire) * 100) : 0;
   const sRT = Math.max(0, Math.min(1, readiness / 100));
   const score = Math.round(sSR * 30 + sDR * 25 + sEM * 25 + sRT * 20);
@@ -381,12 +370,13 @@ function computeAll(d, expensesUsed, labels, t) {
   return {
     income, expenses, debtPay, surplus, savingsRate, debtRatio, emergencyMonths,
     score, rows, atRetire, neededAtRetire, readiness, debtFactor,
-    goals: allGoals, goalsTotal, toGoals, toRetirement, yearsTo, retireFull: capacity * Math.pow(1 + growth, fullFromYear), fullFromYear
+    goals: allGoals, goalsTotal, toGoals, toRetirement, yearsTo,
+    retireFull: capacity * Math.pow(1 + growth, fullFromYear), fullFromYear
   };
 }
 
 /* ------------------------------------------------------------------ */
-/*  UI Components                                                      */
+/*  Components (Logo, Auth, ManualContent, etc)                        */
 /* ------------------------------------------------------------------ */
 function QiwamLogo({ size = 40 }) {
   return (<svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -957,18 +947,7 @@ export default function App() {
   const fixedList = d.fixed || []; const fixedTotal = fixedList.reduce((a, f) => a + num(f.amount), 0);
   const todayDay = Number(todayISO().slice(8, 10)); const isCurrentMonth = month === todayISO().slice(0, 7);
 
-  const daily = useMemo(() => {
-    const n = daysIn(month); const perDay = Array.from({ length: n }, () => 0);
-    monthTx.forEach((x) => { const dd = Number((x.date || "").slice(8, 10)); if (dd >= 1 && dd <= n) perDay[dd - 1] += num(x.amount); });
-    let cum = 0; const series = perDay.map((v, i) => { cum += v; return { day: i + 1, spent: Math.round(v), cum: Math.round(cum) }; });
-    const total = cum; const fixedSpent = monthTx.filter((x) => x.fixedId).reduce((a, x) => a + num(x.amount), 0);
-    const elapsed = isCurrentMonth ? Math.max(1, todayDay) : n;
-    const byCat = {}; monthTx.forEach((x) => { byCat[x.cat] = (byCat[x.cat] || 0) + num(x.amount); });
-    let topCat = null, topVal = 0; Object.entries(byCat).forEach(([k, v]) => { if (v > topVal) { topVal = v; topCat = k; } });
-    const topC = cats.find((c) => c.id === topCat);
-    return { series, total, fixedSpent, variable: total - fixedSpent, avg: total / elapsed, topName: topC ? catName(topC, t) : "—", topVal };
-  }, [monthTx, month, cats, t, isCurrentMonth, todayDay]);
-
+  const daily = useMemo(() => { const n = daysIn(month); const perDay = Array.from({ length: n }, () => 0); monthTx.forEach((x) => { const dd = Number((x.date || "").slice(8, 10)); if (dd >= 1 && dd <= n) perDay[dd - 1] += num(x.amount); }); let cum = 0; const series = perDay.map((v, i) => { cum += v; return { day: i + 1, spent: Math.round(v), cum: Math.round(cum) }; }); const total = cum; const fixedSpent = monthTx.filter((x) => x.fixedId).reduce((a, x) => a + num(x.amount), 0); const elapsed = isCurrentMonth ? Math.max(1, todayDay) : n; const byCat = {}; monthTx.forEach((x) => { byCat[x.cat] = (byCat[x.cat] || 0) + num(x.amount); }); let topCat = null, topVal = 0; Object.entries(byCat).forEach(([k, v]) => { if (v > topVal) { topVal = v; topCat = k; } }); const topC = cats.find((c) => c.id === topCat); return { series, total, fixedSpent, variable: total - fixedSpent, avg: total / elapsed, topName: topC ? catName(topC, t) : "—", topVal }; }, [monthTx, month, cats, t, isCurrentMonth, todayDay]);
   const byDayList = useMemo(() => { const g = {}; monthTx.forEach((x) => { (g[x.date] = g[x.date] || []).push(x); }); return Object.entries(g).sort((a, b) => (a[0] < b[0] ? 1 : -1)); }, [monthTx]);
   const [quickCat, setQuickCat] = useState(null);
   const catSpentMap = useMemo(() => { const m = {}; monthTx.forEach((x) => { m[x.cat] = (m[x.cat] || 0) + num(x.amount); }); return m; }, [monthTx]);
