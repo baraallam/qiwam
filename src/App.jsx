@@ -908,12 +908,30 @@ export default function App() {
     setTab("profile");
   }
   async function logout() { await supabase.auth.signOut(); setUser(null); }
-  async function savePlan() {
+   async function savePlan() {
     const userData = (await supabase.auth.getUser()).data.user;
     if (!userData) return;
-    const { error } = await supabase.from('plans').upsert({ user_id: userData.id, data: d });
-    if (error) console.error("Failed to save:", error);
-    else { setSavedMsg(true); setTimeout(() => setSavedMsg(false), 1800); }
+    
+    // 1. نأخذ نسخة نظيفة من البيانات
+    const cleanData = JSON.parse(JSON.stringify(d));
+
+    // 2. (مهم جداً) تحويل الحقول المالية إلى أرقام صحيحة لتجنب خطأ 400
+    // هذا يضمن أن البيانات المرسلة للخادم هي أرقام وليست نصوصاً
+    const numericFields = ['incYou', 'incSpouse', 'incOther', 'housing', 'transport', 'food', 'education', 'utilities', 'otherExp', 'debtPay', 'debtTotal', 'liquid', 'invested', 'age', 'retireAge', 'children', 'ret', 'inf', 'salaryGrowth'];
+    numericFields.forEach(field => {
+      if (cleanData[field] !== undefined) cleanData[field] = Number(cleanData[field]) || 0;
+    });
+
+    // 3. الحفظ في قاعدة البيانات
+    const { error } = await supabase.from('plans').upsert({ user_id: userData.id, data: cleanData });
+    
+    if (error) {
+      console.error("فشل الحفظ:", error);
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
+    } else {
+      setSavedMsg(true); 
+      setTimeout(() => setSavedMsg(false), 1800);
+    }
   }
 
   const set = (k) => (v) => setD((p) => ({ ...p, [k]: v }));
