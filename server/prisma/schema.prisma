@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id           String   @id @db.Uuid
+  fullName     String?  @map("full_name")
+  email        String?
+  username     String?
+  passwordHash String?  @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  plan         Plan?
+
+  @@map("profiles")
+}
+
+model Plan {
+  userId    String   @id @map("user_id") @db.Uuid
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  profile   Profile  @relation(fields: [userId], references: [id])
+
+  @@map("plans")
+}
+
+model Category {
+  id        BigInt    @id @default(autoincrement())
+  name      String?
+  icon      String?
+  type      String?   @default("expense")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  budgets   Budget[]
+  expenses  Expense[]
+
+  @@map("categories")
+}
+
+model Expense {
+  id          BigInt    @id @default(autoincrement())
+  userId      String?   @map("user_id") @db.Uuid
+  categoryId  BigInt?   @map("category_id")
+  amount      Decimal   @db.Decimal
+  description String?
+  date        DateTime? @default(now()) @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("expenses")
+}
+
+model Budget {
+  id         BigInt    @id @default(autoincrement())
+  userId     String?   @map("user_id") @db.Uuid
+  categoryId BigInt?   @map("category_id")
+  amount     Decimal?  @db.Decimal
+  month      Int?
+  year       Int?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+model MonthlyReport {
+  id            BigInt   @id @default(autoincrement())
+  userId        String?  @map("user_id") @db.Uuid
+  month         Int?
+  year          Int?
+  totalIncome   Decimal? @map("total_income") @db.Decimal
+  totalExpenses Decimal? @map("total_expenses") @db.Decimal
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("monthly_reports")
+}
