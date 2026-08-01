@@ -1,16 +1,71 @@
-# React + Vite
+# Qiwam
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Qiwam is split into a Vite React client and an Express API server.
 
-Currently, two official plugins are available:
+## Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```txt
+client/
+  src/
+  vite.config.js
 
-## React Compiler
+server/
+  src/
+    config/
+    domain/
+    middleware/
+    routes/
+    services/
+    utils/
+  prisma/
+    schema.prisma
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+docs/
+  database-map.md
+```
 
-## Expanding the Oxlint configuration
+## Development
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+npm install
+npm run dev
+```
+
+The dev command starts:
+
+- client: `http://localhost:5173`
+- API: `http://localhost:3001`
+
+The client proxies `/api/*` to the API server.
+
+## Environment
+
+Use `.env.example` as the template. Keep `.env` local only.
+
+Backend-only values:
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `JWT_SECRET`
+
+The browser should not receive database credentials.
+
+## Database
+
+See `docs/database-map.md` for the current Supabase schema, app-to-database field mapping, and known mismatches.
+
+Current auth model:
+
+- users are stored in `public.profiles`
+- passwords are bcrypt hashes in `profiles.password_hash`
+- sessions are signed JWTs from the backend
+- login accepts email or name
+
+## Prisma
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+Migrations require a reachable Postgres connection. The direct Supabase host currently resolves IPv6-only in this environment, so use the Supabase pooler connection string for local migration work.
