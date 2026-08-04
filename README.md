@@ -50,6 +50,21 @@ Backend-only values:
 
 The browser should not receive database credentials.
 
+For Supabase, use the pooler host shown in `.env.example`. Do not use
+`db.qftylxsandewmivtohgg.supabase.co:5432` for local development, because that
+direct host can resolve IPv6-only and Prisma may fail with:
+
+```txt
+Can't reach database server at db.qftylxsandewmivtohgg.supabase.co:5432
+```
+
+Use this shape instead:
+
+```env
+DATABASE_URL=postgresql://postgres.qftylxsandewmivtohgg:<password>@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
+DIRECT_URL=postgresql://postgres.qftylxsandewmivtohgg:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
 ## Database
 
 See `docs/database-map.md` for the current Supabase schema, app-to-database field mapping, and known mismatches.
