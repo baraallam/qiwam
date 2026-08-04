@@ -226,3 +226,302 @@ h2 {
     transition-duration: .01ms !important;
   }
 }
+
+/* Reference-inspired application shell */
+.qiwam-topbar { position: sticky; top: 0; z-index: 20; box-shadow: 0 3px 20px rgba(18,60,51,.16); }
+.qiwam-sidebar { z-index: 10; }
+.qiwam-main > section, .qiwam-main section { box-shadow: 0 8px 26px rgba(18,60,51,.055); }
+@media (min-width: 900px) {
+  .qiwam-sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; width: 236px; padding-top: 0; border-inline-end: 1px solid var(--border); border-bottom: 0 !important; box-shadow: 8px 0 28px rgba(18,60,51,.06); }
+  .qiwam-sidebar > div { height: 100%; padding: 84px 12px 20px !important; display: flex !important; flex-direction: column; gap: 6px !important; align-items: stretch; }
+  .qiwam-sidebar button { width: 100%; text-align: start; border-bottom: 0 !important; border-radius: 10px; padding: 12px 14px !important; }
+  .qiwam-topbar { margin-inline-start: 236px; }
+  .qiwam-main { width: calc(100% - 236px) !important; max-width: 1420px !important; margin-inline-start: 236px !important; }
+  .qiwam-subtabs { margin-inline-start: 236px !important; width: calc(100% - 236px) !important; }
+}
+@media (max-width: 899px) { .qiwam-topbar { position: relative; } }
+/* Reference visual system: Family page first */
+.qiwam-sidebar { background: var(--pine) !important; border-color: rgba(255,255,255,.12) !important; }
+.qiwam-sidebar button { color: rgba(255,255,255,.84) !important; background: transparent !important; }
+.qiwam-sidebar button:hover { background: rgba(255,255,255,.10) !important; color: #fff !important; }
+.qiwam-sidebar button[style*="border-bottom: 3px solid"] { background: rgba(192,154,82,.22) !important; color: #fff !important; box-shadow: inset 3px 0 0 var(--gold); }
+.qiwam-reference-card { border-radius: 20px !important; border: 1px solid rgba(18,60,51,.08) !important; box-shadow: 0 16px 40px rgba(18,60,51,.09) !important; padding: clamp(20px, 3vw, 32px) !important; }
+.qiwam-reference-card button { border-radius: 999px !important; }
+.qiwam-family-page > div:not(.qiwam-page-eyebrow) > div > div { border-radius: 16px !important; }
+.qiwam-page-eyebrow { color: var(--oasis); font-size: 12px; font-weight: 700; letter-spacing: .08em; margin-bottom: 8px; }
+
+/* Stage 1: authenticated shell parity.  This intentionally overrides the
+   earlier horizontal navigation while leaving every page component intact. */
+.qiwam-app { --qiwam-sidebar-width: 190px; min-height: 100vh; }
+.qiwam-app .qiwam-topbar { display: none !important; }
+.qiwam-mobile-header { display: none; }
+.qiwam-app .qiwam-sidebar { position: fixed; z-index: 30; inset-block: 0; inset-inline-start: 0; width: var(--qiwam-sidebar-width); height: 100vh; padding: 8px 8px 10px; display: flex; flex-direction: column; background: #0e4036 !important; color: #fff; border: 0 !important; box-shadow: none; transition: width .2s ease; }
+.qiwam-app .qiwam-sidebar > div { height: auto; padding: 0 !important; align-items: stretch !important; }
+.qiwam-app .qiwam-sidebar button { width: 100%; min-height: 38px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 9px; padding: 9px 10px !important; background: transparent !important; color: rgba(255,255,255,.82) !important; font-family: var(--sans); font-size: 12px; text-align: start; cursor: pointer; }
+.qiwam-app .qiwam-sidebar button:hover { background: rgba(255,255,255,.09) !important; color: #fff !important; }
+.qiwam-sidebar-brand { padding: 0 4px 12px; border-bottom: 1px solid rgba(255,255,255,.13); }
+.qiwam-app .qiwam-sidebar-brand-button { min-height: 46px !important; padding: 3px 0 !important; }
+.qiwam-sidebar-brand strong { display: block; color: #fff; font-size: 15px; line-height: 1.1; }
+.qiwam-sidebar-brand small { display: block; max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; color: rgba(255,255,255,.62); font-size: 8px; }
+.qiwam-app .qiwam-sidebar .qiwam-sidebar-nav { display: grid; gap: 2px; padding-top: 8px !important; }
+.qiwam-sidebar-item { position: relative; }
+.qiwam-app .qiwam-sidebar-item.is-active { background: rgba(255,255,255,.18) !important; color: #fff !important; font-weight: 700; }
+.qiwam-sidebar-item.is-active::before { content: ""; position: absolute; inset-block: 7px; inset-inline-start: 0; width: 3px; border-radius: 999px; background: var(--gold); }
+.qiwam-app .qiwam-sidebar .qiwam-sidebar-footer { display: grid; gap: 5px; margin-top: auto; padding-top: 10px !important; border-top: 0; }
+.qiwam-app .qiwam-sidebar-footer .qiwam-sidebar-collapse { border: 1px solid rgba(255,255,255,.28); }
+.qiwam-sidebar-footer-divider { height: 1px; margin: 2px 2px 4px; background: rgba(255,255,255,.15); }
+.qiwam-sidebar-collapsed { --qiwam-sidebar-width: 58px; }
+.qiwam-sidebar-collapsed .qiwam-sidebar { padding-inline: 7px; }
+.qiwam-sidebar-collapsed .qiwam-sidebar-label { display: none; }
+.qiwam-sidebar-collapsed .qiwam-sidebar button { justify-content: center; padding-inline: 4px !important; }
+.qiwam-sidebar-collapsed .qiwam-sidebar-brand { padding-inline: 0; }
+.qiwam-sidebar-collapsed .qiwam-sidebar-item.is-active::before { inset-inline-start: 1px; }
+.qiwam-app .qiwam-main { width: min(calc(100% - var(--qiwam-sidebar-width) - 40px), 676px) !important; max-width: none !important; margin-block: 14px 52px !important; margin-inline-start: calc(var(--qiwam-sidebar-width) + 22px) !important; margin-inline-end: auto !important; padding: 0 !important; }
+.qiwam-app .qiwam-subtabs { width: min(calc(100% - var(--qiwam-sidebar-width) - 40px), 676px) !important; max-width: none !important; margin-block: 5px 0 !important; margin-inline-start: calc(var(--qiwam-sidebar-width) + 22px) !important; margin-inline-end: auto !important; padding: 0 !important; background: transparent !important; }
+.qiwam-save-status { margin-inline-end: auto; display: flex; align-items: center; gap: 7px; color: var(--oasis); font-size: 11px; font-weight: 700; }
+.qiwam-save-button { border: 0; border-radius: 999px; padding: 6px 12px; background: var(--gold); color: var(--pine); font-family: var(--sans); font-size: 11px; font-weight: 700; cursor: pointer; }
+.qiwam-page-save { display:flex; align-items:center; justify-content:flex-end; min-height:30px; gap:8px; margin:0 0 8px; color:var(--oasis); font-size:11px; font-weight:700; }
+.qiwam-page-save span:empty { display:none; }
+
+@media (max-width: 899px) {
+  .qiwam-app .qiwam-sidebar { display: none; }
+  .qiwam-mobile-header { position: sticky; z-index: 25; top: 0; min-height: 56px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--pine); color: #fff; box-shadow: 0 3px 16px rgba(18,60,51,.16); }
+  .qiwam-mobile-menu { display: inline-grid !important; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
+  .qiwam-mobile-brand { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: #fff; font-family: var(--sans); font-weight: 700; cursor: pointer; }
+  .qiwam-app .qiwam-main, .qiwam-app .qiwam-subtabs { width: auto !important; max-width: none !important; margin-inline: 16px !important; padding: 0 !important; }
+  .qiwam-app .qiwam-subtabs { margin-top: 12px !important; }
+  .qiwam-save-status { margin-inline-end: 0; }
+  .qiwam-page-save.qiwam-mobile-save { min-height:0; margin:0; }
+}
+
+/* Stage 2: Family reference hierarchy. */
+.qiwam-family-experience { display: grid; gap: 12px; }
+.qiwam-family-summary { padding: 14px 16px !important; }
+.qiwam-family-summary h1 { margin-bottom: 5px !important; }
+.qiwam-family-summary p { margin: 0; color: var(--text); font-size: 12px; line-height: 1.65; }
+.qiwam-family-summary-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; color: var(--text-h); font-size: 11px; font-weight: 700; }
+.qiwam-family-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.qiwam-family-role-card, .qiwam-family-group { padding: 14px !important; }
+.qiwam-family-role-card h2, .qiwam-family-group h2 { margin: 0; color: var(--pine); font-size: 14px; }
+.qiwam-family-role-content { margin-top: 10px; }
+.qiwam-family-group { overflow: hidden; }
+.qiwam-family-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.qiwam-family-section-heading p { margin: 4px 0 0; color: var(--text); font-size: 11px; }
+.qiwam-family-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.qiwam-family-member-card { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.qiwam-family-member-heading { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 8px; }
+.qiwam-family-member-heading strong { display: block; color: var(--text-h); font-size: 13px; }
+.qiwam-family-member-heading span { display: block; margin-top: 2px; color: var(--text); font-size: 10.5px; }
+.qiwam-family-remove { border: 0; background: transparent; color: var(--bad); font-family: var(--sans); font-size: 11px; cursor: pointer; }
+.qiwam-family-add { min-height: 88px; display: grid; place-content: center; gap: 5px; width: 100%; border: 1.5px dashed var(--oasis); border-radius: 12px; background: transparent; color: var(--oasis); font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer; }
+.qiwam-family-add span { font-size: 18px; line-height: 1; }
+.qiwam-family-select { display: block; margin-bottom: 10px; }
+.qiwam-family-select span { display: block; margin-bottom: 5px; color: var(--text); font-size: 11px; }
+.qiwam-family-select select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: #fbfcfb; color: var(--text-h); font-family: var(--sans); font-size: 12px; }
+.qiwam-family-check { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--text); font-size: 11px; cursor: pointer; }
+.qiwam-family-check input { accent-color: var(--oasis); }
+.qiwam-family-error { margin: 0; color: var(--bad); font-size: 12px; }
+@media (max-width: 560px) { .qiwam-family-pair { grid-template-columns: 1fr; } .qiwam-family-grid { grid-template-columns: 1fr; } }
+
+/* Stage 3: compact calculator Profile and reference goal grid. */
+.qiwam-profile-grid > section { padding: 14px !important; border-radius: 14px !important; }
+.qiwam-profile-grid h2 { font-size: 13px !important; margin-bottom: 10px !important; }
+.qiwam-profile-grid label { margin-bottom: 8px !important; }
+.qiwam-profile-grid input { padding: 8px 9px !important; font-size: 13px !important; }
+.qiwam-legacy-goal-sentinel ~ section, .qiwam-legacy-goal-sentinel ~ div { display: none !important; }
+.qiwam-goals-experience { padding: 16px !important; }
+.qiwam-goals-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.qiwam-goals-heading h1 { margin: 0 0 4px; color: var(--pine); font-size: 16px; }
+.qiwam-goals-heading p { max-width: 430px; margin: 0; color: var(--text); font-size: 11px; line-height: 1.55; }
+.qiwam-goals-reserve { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--text); font-size: 10px; white-space: nowrap; }
+.qiwam-goals-reserve input, .qiwam-goal-card-heading input { accent-color: var(--oasis); }
+.qiwam-goal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.qiwam-goal-card { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #fbfcfb; }
+.qiwam-goal-card.is-enabled { border-color: var(--oasis); background: #fff; }
+.qiwam-goal-card-heading { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; min-height: 22px; margin-bottom: 5px; }
+.qiwam-goal-card-heading label { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-size: 9px; }
+.qiwam-goal-card-heading strong { overflow: hidden; color: var(--text-h); font-size: 12px; text-align: end; text-overflow: ellipsis; white-space: nowrap; }
+.qiwam-goal-card-heading button { width: 19px; height: 19px; border: 0; border-radius: 6px; background: transparent; color: var(--bad); cursor: pointer; }
+.qiwam-goal-card-fields { opacity: .42; pointer-events: none; }
+.qiwam-goal-card.is-enabled .qiwam-goal-card-fields { opacity: 1; pointer-events: auto; }
+.qiwam-goal-card-fields label { margin-bottom: 6px !important; }
+.qiwam-goal-card-fields label span { margin-bottom: 3px !important; font-size: 9px !important; }
+.qiwam-goal-card-fields input { padding: 7px 8px !important; font-size: 12px !important; }
+.qiwam-goal-card-fields p { margin: 1px 0 4px; color: var(--text); font-size: 9px; line-height: 1.4; }
+.qiwam-goal-card-fields .is-done { color: var(--good); font-weight: 700; }
+.qiwam-goal-liquid { width: 100%; margin: -1px 0 5px; border: 1px dashed var(--oasis); border-radius: 7px; padding: 5px; background: transparent; color: var(--oasis); font-family: var(--sans); font-size: 9px; font-weight: 700; cursor: pointer; }
+.qiwam-goal-add { min-height: 154px; border: 1.5px dashed var(--oasis); border-radius: 10px; background: transparent; color: var(--oasis); font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer; }
+.qiwam-goal-contribution { margin-top: 10px; color: var(--text); font-size: 11px; }
+.qiwam-goal-contribution summary { color: var(--oasis); font-weight: 700; cursor: pointer; }
+.qiwam-goal-contribution > div { display: grid; grid-template-columns: 1.3fr 1fr 1.4fr auto; align-items: end; gap: 8px; margin-top: 8px; }
+.qiwam-goal-contribution label { display: block; color: var(--text); font-size: 10px; }
+.qiwam-goal-contribution select { width: 100%; margin-top: 3px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-family: var(--sans); }
+.qiwam-goal-contribution button { border: 0; border-radius: 8px; padding: 9px 10px; background: var(--oasis); color: #fff; font-family: var(--sans); font-size: 11px; font-weight: 700; cursor: pointer; }
+@media (max-width: 700px) { .qiwam-profile-grid, .qiwam-goal-grid { grid-template-columns: 1fr !important; } .qiwam-goal-contribution > div { grid-template-columns: 1fr; } .qiwam-goals-heading { align-items: stretch; flex-direction: column; } .qiwam-goals-reserve { white-space: normal; } }
+
+/* Stage 4: results density follows the compact reference hierarchy without
+   changing any of the values passed from computeAll. */
+.qiwam-results-experience { gap: 12px !important; }
+.qiwam-results-experience > section { padding: 14px !important; border-radius: 14px !important; }
+.qiwam-results-experience h2 { font-size: 13px !important; margin-bottom: 9px !important; }
+.qiwam-results-experience .recharts-responsive-container { max-height: 220px; }
+.qiwam-results-experience table { font-size: 11px !important; }
+.qiwam-results-experience th, .qiwam-results-experience td { padding: 7px 6px !important; }
+@media (max-width: 700px) { .qiwam-results-experience > div { min-width: 0; } .qiwam-results-experience .recharts-responsive-container { max-height: 210px; } }
+
+/* Stage 5: preserve spending handlers while matching the reference order. */
+.qiwam-spending-experience { gap: 10px !important; }
+.qiwam-spending-experience > section { padding: 14px !important; border-radius: 14px !important; }
+.qiwam-spending-experience > section:nth-of-type(1) { order: 3; }
+.qiwam-spending-experience > section:nth-of-type(2) { order: 4; }
+.qiwam-spending-experience > section:nth-of-type(3) { order: 1; }
+.qiwam-spending-experience > section:nth-of-type(4) { order: 2; }
+.qiwam-spending-experience > section:nth-of-type(5) { order: 5; }
+.qiwam-spending-experience > section:nth-of-type(6) { order: 6; }
+.qiwam-spending-experience > section:nth-of-type(7) { order: 7; }
+.qiwam-spending-reserve { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--gold-soft, #F4ECDD) !important; border-color: #e4d6b8 !important; }
+.qiwam-spending-reserve label { display: inline-flex; align-items: center; gap: 6px; color: var(--pine); font-size: 12px; font-weight: 700; }
+.qiwam-spending-reserve input { accent-color: var(--oasis); }
+.qiwam-spending-reserve span { color: var(--text); font-size: 10px; }
+.qiwam-spending-experience h2 { font-size: 13px !important; margin-bottom: 8px !important; }
+.qiwam-spending-experience .recharts-responsive-container { max-height: 220px; }
+@media (max-width: 700px) { .qiwam-spending-reserve { align-items: start; flex-direction: column; } }
+
+/* The two month-aware summaries already use the active month transaction memo
+   and the saved category targets.  Keep their presentation part of the same
+   compact spending flow rather than looking like a separate report page. */
+.qiwam-spending-experience ~ div > section {
+  padding: 14px !important;
+  border-radius: 14px !important;
+}
+.qiwam-spending-experience ~ div > section:first-child > div:first-child {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.qiwam-spending-experience ~ div > section:first-child > div:nth-child(2) {
+  margin: 10px 0 14px !important;
+}
+.qiwam-spending-experience ~ div > section:last-child > div {
+  gap: 8px 12px !important;
+}
+@media (max-width: 700px) {
+  .qiwam-spending-experience ~ div > section:first-child > div:nth-child(2) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Reference report, drawer and print affordances. Logical properties keep the
+   same UI correct when the language flips between Arabic and English. */
+.qiwam-report-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.qiwam-report-picker { text-align:start; cursor:pointer; font-family:var(--sans); border:1px solid var(--border); border-radius:20px; padding:18px; background:#fff; color:var(--text-h); display:flex; gap:12px; align-items:flex-start; }
+.qiwam-reports-landing { display:grid; gap:12px; }
+.qiwam-reports-heading { padding:16px !important; }
+.qiwam-reports-heading h1 { margin:0 0 4px; color:var(--pine); font-size:18px; }
+.qiwam-reports-heading p { margin:0; color:var(--text); font-size:12px; }
+.qiwam-report-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.qiwam-report-picker { min-height:94px; align-items:center; border-radius:14px; padding:14px; box-shadow:0 6px 18px rgba(18,60,51,.045); }
+.qiwam-report-picker:hover { border-color:var(--oasis); box-shadow:0 10px 24px rgba(18,60,51,.1); }
+.qiwam-report-picker b { display:block; color:var(--pine); font-size:13px; }
+.qiwam-report-picker small { display:block; margin-top:4px; color:var(--text); font-size:11px; line-height:1.4; }
+.qiwam-report-icon { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border-radius:9px; background:var(--gold-soft); font-size:17px; }
+.qiwam-report-detail { padding:16px !important; }
+.qiwam-report-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--border); }
+.qiwam-report-action-spacer { flex:1; }
+.qiwam-report-detail-title { margin:0 0 4px; color:var(--pine); font-size:19px; }
+.qiwam-report-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin:14px 0; }
+.qiwam-report-metric { min-width:0; padding:11px; border:1px solid var(--border); border-radius:12px; background:#fff; }
+.qiwam-report-metric span { display:block; color:var(--text); font-size:10px; }
+.qiwam-report-metric strong { display:block; margin-top:3px; color:var(--text-h); font-size:14px; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.qiwam-report-metric.is-good strong { color:var(--good); }
+.qiwam-report-metric.is-bad strong { color:var(--bad); }
+.qiwam-report-range { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; }
+.qiwam-report-chart { width:100%; height:230px; margin:12px 0 16px; }
+.qiwam-report-empty { margin:14px 0 0; padding:20px; border:1px dashed var(--border); border-radius:12px; color:var(--text); font-size:12px; text-align:center; }
+.qiwam-report-note { margin:12px 0 0; color:var(--text); font-size:11px; line-height:1.6; }
+
+/* Stage 7: Financial Knowledge and Guide share the compact reference width. */
+.qiwam-knowledge-experience { display:grid; gap:12px; }
+.qiwam-knowledge-experience ~ div { display:none !important; }
+.qiwam-knowledge-intro { padding:16px !important; background:var(--gold-soft) !important; border-color:#e4d6b8 !important; }
+.qiwam-knowledge-intro h1 { margin:0 0 5px; color:var(--pine); font-size:18px; }
+.qiwam-knowledge-intro p { max-width:600px; margin:0; color:var(--text-h); font-size:12px; line-height:1.7; }
+.qiwam-knowledge-library { padding:16px !important; }
+.qiwam-knowledge-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; }
+.qiwam-knowledge-controls > input { flex:1 1 220px; min-width:0; padding:9px 13px; border:1px solid var(--border); border-radius:999px; outline:0; background:#fbfcfb; color:var(--text-h); font-family:var(--sans); font-size:12px; }
+.qiwam-knowledge-controls > input:focus { border-color:var(--oasis); box-shadow:0 0 0 3px rgba(28,116,97,.1); }
+.qiwam-knowledge-filters { display:flex; flex-wrap:wrap; gap:6px; }
+.qiwam-knowledge-filters button,.qiwam-knowledge-ask,.qiwam-guide-actions button { border:1px solid var(--border); border-radius:999px; padding:7px 12px; background:#fff; color:var(--text-h); font-family:var(--sans); font-size:11px; cursor:pointer; }
+.qiwam-knowledge-filters button.is-active { border-color:var(--oasis); background:var(--oasis); color:#fff; font-weight:700; }
+.qiwam-knowledge-ask { border-color:var(--gold); background:var(--gold); color:var(--pine); font-weight:700; }
+.qiwam-knowledge-ask:disabled { cursor:not-allowed; border-color:var(--border); background:#fff; color:var(--text); }
+.qiwam-knowledge-offline { display:flex; align-items:flex-start; gap:9px; margin:0 0 12px; padding:10px 12px; border:1px solid #e4d6b8; border-radius:10px; background:var(--gold-soft); }
+.qiwam-knowledge-offline span { font-size:15px; }
+.qiwam-knowledge-offline p { flex:1; margin:0; color:var(--text-h); font-size:11px; line-height:1.6; }
+.qiwam-knowledge-offline button { border:0; background:transparent; color:var(--text); font-size:17px; cursor:pointer; }
+.qiwam-knowledge-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; align-items:start; }
+.qiwam-knowledge-card { min-width:0; padding:11px; border:1px solid var(--border); border-radius:11px; background:#fff; color:var(--text-h); font-family:var(--sans); text-align:start; cursor:pointer; }
+.qiwam-knowledge-card.is-open { border-color:var(--oasis); background:#f6faf8; }
+.qiwam-knowledge-card-top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:7px; }
+.qiwam-knowledge-icon { display:grid; place-items:center; width:26px; height:26px; font-size:16px; }
+.qiwam-knowledge-card strong { display:block; overflow:hidden; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.qiwam-knowledge-card small { display:block; margin-top:2px; color:var(--oasis); font-size:9px; font-weight:700; }
+.qiwam-knowledge-card i { color:var(--text); font-size:16px; font-style:normal; transition:transform .15s; }
+.qiwam-knowledge-card.is-open i { transform:rotate(90deg); }
+.qiwam-knowledge-body { display:block; margin-top:9px; color:var(--text-h); font-size:11px; line-height:1.7; }
+.qiwam-knowledge-empty { display:grid; justify-items:center; gap:5px; padding:24px; border:1px dashed var(--border); border-radius:12px; color:var(--text); font-size:12px; text-align:center; }
+.qiwam-knowledge-empty strong { color:var(--text-h); }
+.qiwam-knowledge-disclaimer { margin:14px 0 0; color:var(--text); font-size:10px; line-height:1.6; text-align:center; }
+
+.qiwam-guide-experience { display:grid; gap:10px; }
+.qiwam-guide-heading { padding:16px !important; background:var(--gold-soft) !important; border-color:#e4d6b8 !important; }
+.qiwam-guide-brand { display:flex; align-items:center; gap:10px; }
+.qiwam-guide-brand h1 { margin:0; color:var(--pine); font-size:18px; }
+.qiwam-guide-brand small { color:var(--text); font-size:10px; }
+.qiwam-guide-heading > p { margin:10px 0 12px; color:var(--text-h); font-size:12px; line-height:1.7; }
+.qiwam-guide-actions { display:flex; flex-wrap:wrap; gap:7px; }
+.qiwam-guide-actions .is-print { border-color:var(--pine); background:var(--pine); color:#fff; font-weight:700; }
+.qiwam-guide-chapter { padding:0 !important; overflow:hidden; }
+.qiwam-guide-chapter-toggle { display:flex; width:100%; align-items:center; gap:10px; border:0; padding:12px 14px; background:#fff; color:var(--text-h); font-family:var(--sans); text-align:start; cursor:pointer; }
+.qiwam-guide-chapter:has(.qiwam-guide-chapter-content:not(.is-collapsed)) .qiwam-guide-chapter-toggle { border-bottom:1px solid #e4d6b8; background:var(--gold-soft); }
+.qiwam-guide-chapter-icon { font-size:18px; }
+.qiwam-guide-chapter-toggle > span:nth-child(2) { flex:1; }
+.qiwam-guide-chapter-toggle small { display:block; color:var(--gold); font-size:9px; font-weight:700; }
+.qiwam-guide-chapter-toggle strong { display:block; margin-top:1px; color:var(--pine); font-size:13px; }
+.qiwam-guide-chapter-toggle i { color:var(--text); font-size:17px; font-style:normal; }
+.qiwam-guide-chapter-content { padding:14px 16px 16px; }
+.qiwam-guide-chapter-content.is-collapsed { display:none; }
+.qiwam-guide-print-title { display:none; }
+.qiwam-guide-chapter-content > p { margin:0 0 13px; color:var(--text); font-size:12px; line-height:1.7; }
+.qiwam-guide-chapter-content > div { display:grid; gap:11px; }
+.qiwam-guide-chapter-content article { display:flex; align-items:flex-start; gap:9px; }
+.qiwam-guide-chapter-content article > span { display:grid; flex:0 0 21px; place-items:center; width:21px; height:21px; border-radius:50%; background:var(--gold); color:var(--pine); font-size:10px; font-weight:700; }
+.qiwam-guide-chapter-content article strong { display:block; color:var(--text-h); font-size:12px; }
+.qiwam-guide-chapter-content article p { margin:2px 0 0; color:var(--text); font-size:11px; line-height:1.65; }
+.qiwam-guide-link { margin-top:13px; border:1px dashed var(--oasis); border-radius:9px; padding:7px 12px; background:transparent; color:var(--oasis); font-family:var(--sans); font-size:11px; font-weight:700; cursor:pointer; }
+.qiwam-guide-footer { margin:2px 0 0; color:var(--text); font-size:10px; text-align:center; }
+.qiwam-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.qiwam-report-table { width:100%; min-width:520px; border-collapse:collapse; font-size:13px; }
+.qiwam-report-table th,.qiwam-report-table td { padding:9px; text-align:start; border-bottom:1px solid var(--border); }
+.qiwam-report-table th:not(:first-child),.qiwam-report-table td:not(:first-child) { text-align:end; }
+.qiwam-print-meta { color:var(--text); font-size:12px; margin:0 0 18px; }
+.qiwam-mobile-menu { display:none; }
+.qiwam-drawer-backdrop { position:fixed; inset:0; z-index:50; background:rgba(20,32,29,.42); }
+.qiwam-drawer { position:absolute; inset-block:0; inset-inline-start:0; width:min(82vw,320px); background:#fff; color:var(--text-h); box-shadow:0 16px 48px rgba(18,60,51,.28); animation:qiwam-drawer-in .22s ease-out; overflow-y:auto; }
+.qiwam-drawer-item { display:block; width:100%; padding:14px 20px; text-align:start; border:0; border-bottom:1px solid var(--border); background:#fff; color:var(--text-h); font-family:var(--sans); cursor:pointer; }
+.qiwam-drawer-item[aria-current="page"] { color:#fff; background:var(--oasis); font-weight:700; }
+@keyframes qiwam-drawer-in { from { transform:translateX(var(--drawer-from,-100%)); } to { transform:translateX(0); } }
+[dir="rtl"] .qiwam-drawer { --drawer-from:100%; }
+@media (max-width:899px) { .qiwam-mobile-menu { display:inline-flex; } .qiwam-sidebar { display:none; } .qiwam-topbar,.qiwam-main,.qiwam-subtabs { margin-inline-start:0 !important; width:100% !important; } }
+@media (max-width:700px) { .qiwam-knowledge-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:560px) { .qiwam-report-grid { grid-template-columns:1fr; } .qiwam-report-actions { align-items:stretch; } .qiwam-report-action-spacer { display:none; flex-basis:100%; } .qiwam-report-actions button { flex:1; } .qiwam-report-chart { height:210px; } .qiwam-knowledge-grid { grid-template-columns:1fr; } .qiwam-knowledge-controls > input { flex-basis:100%; } }
+@media print {
+  @page { margin: 14mm; }
+  body { background:#fff !important; color:#14201D !important; }
+  .no-print,.qiwam-topbar,.qiwam-sidebar,.qiwam-subtabs,.qiwam-header-actions,button { display:none !important; }
+  .qiwam-main { width:100% !important; max-width:none !important; margin:0 !important; padding:0 !important; }
+  section,.qiwam-reference-card { box-shadow:none !important; break-inside:avoid; page-break-inside:avoid; }
+  tr { break-inside:avoid; page-break-inside:avoid; }
+  .qiwam-report-table { min-width:0 !important; }
+  .qiwam-guide-chapter-content.is-collapsed { display:block !important; }
+  .qiwam-guide-print-title { display:block; margin:0 0 8px; color:var(--pine); font-size:15px; }
+}

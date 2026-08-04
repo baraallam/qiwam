@@ -4,8 +4,13 @@ import {
   ComposedChart, Bar, Line,
 } from "recharts";
 import { api, clearAuthToken, getAuthToken, setAuthToken } from "./lib/api";
-import ManualContent from "./components/ManualContent";
 import { CustomItems, Field, Gauge, QiwamLogo, SaduBand, Stat } from "./components/ui";
+import { GoalContributionPanel } from "./components/PlanningPages";
+import ReportsExperience from "./components/ReportsExperience";
+import FamilyExperience from "./components/FamilyExperience";
+import { GoalReservePanel, GoalsExperience } from "./components/CalculatorEnhancements";
+import { GuideExperience, KnowledgeExperience } from "./components/KnowledgeGuideEnhancements";
+import LocalizedFixedChecklist from "./components/LocalizedFixedChecklist";
 import { KB } from "./data/knowledgeBase";
 import { T } from "./data/translations";
 import { computeAll, DEFAULTS, catIcon, catName, daysInMonthOf, estExpensesOf, fmt, normalizePlan, num, pct, todayISO } from "./domain/planner";
@@ -13,12 +18,31 @@ import { C, FONT, card, h2s } from "./theme/tokens";
 
 const VERSION_LABEL = "الإصدار 1.0 — يوليو 2026 · Version 1.0 — July 2026";
 
+const ROUTES = { "#/family": "family", "#/calculator": "calculator", "#/spending": "spending", "#/reports": "reports", "#/learn": "learn", "#/manual": "manual" };
+const routeForPage = (page) => Object.entries(ROUTES).find(([, value]) => value === page)?.[0] || "#/family";
+
 function VersionFooter() {
   return (
     <footer style={{ color: C.sub, fontFamily: FONT, fontSize: 12, padding: "18px clamp(16px, 3vw, 40px) 28px", textAlign: "center" }}>
       {VERSION_LABEL}
     </footer>
   );
+}
+
+function NavGlyph({ name }) {
+  const common = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
+  const paths = {
+    calculator: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1" /></>,
+    spending: <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M7 10h10M7 14h5" /><path d="M7 4v4M17 4v4" /></>,
+    family: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.2" /><path d="M3.5 20c.6-3.4 2.6-5 5.5-5s4.9 1.6 5.5 5M15 15.5c2.8.2 4.4 1.7 4.9 4.5" /></>,
+    reports: <><path d="M5 20V10M12 20V4M19 20v-7" /><path d="M3 20h18" /></>,
+    learn: <><path d="M4 5.5c3.1-1.3 5.8-.8 8 1.1 2.2-1.9 4.9-2.4 8-1.1v13c-3.1-1.3-5.8-.8-8 1.1-2.2-1.9-4.9-2.4-8-1.1z" /><path d="M12 6.6v13" /></>,
+    manual: <><circle cx="12" cy="12" r="8" /><path d="M9.7 9.5a2.4 2.4 0 1 1 3.8 2c-1.2.8-1.5 1.3-1.5 2.5M12 17h.01" /></>,
+    language: <><circle cx="12" cy="12" r="8" /><path d="M4.5 12h15M12 4a12 12 0 0 1 0 16M12 4a12 12 0 0 0 0 16" /></>,
+    logout: <><path d="M10 5H5v14h5M14 8l3 4-3 4M8 12h9" /></>,
+    collapse: <><path d="M15 5l-7 7 7 7" /><path d="M21 5v14" /></>,
+  };
+  return <svg {...common}>{paths[name]}</svg>;
 }
 
 function EyeIcon({ visible }) {
@@ -86,20 +110,11 @@ export default function App() {
   const t = T[lang];
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
-  const [backupOpen, setBackupOpen] = useState(false);
-  const [backupText, setBackupText] = useState("");
-  const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const openBackup = async () => {
-    const plan = d; const accountName = user?.name || "User"; const username = user?.username;
-    setBackupText(JSON.stringify({ username, name: accountName, plan }));
-    setCopied(false); setBackupOpen(true);
-  };
-  const copyBackup = async () => { try { await navigator.clipboard.writeText(backupText); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {} };
 
   const pageFromHash = () => {
     const h = typeof window !== "undefined" ? window.location.hash : "";
-    return h === "#/spending" ? "spending" : h === "#/learn" ? "learn" : h === "#/manual" ? "manual" : "calculator";
+    return ROUTES[h] || "family";
   };
   const [page, setPage] = useState(pageFromHash);
   const [tab, setTab] = useState("profile");
@@ -108,9 +123,11 @@ export default function App() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
-  const go = (p) => { try { window.location.hash = p === "spending" ? "#/spending" : p === "learn" ? "#/learn" : p === "manual" ? "#/manual" : "#/calculator"; } catch {} setPage(p); };
+  const go = (p) => { const route = routeForPage(p); try { window.location.hash = route; } catch {} setPage(ROUTES[route]); };
   const [d, setD] = useState(DEFAULTS);
   const [savedMsg, setSavedMsg] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -118,6 +135,7 @@ export default function App() {
         try {
           const { user: currentUser, plan } = await api.me();
           setUser(currentUser);
+          if (!ROUTES[window.location.hash]) window.location.hash = "#/family";
           if (plan) setD(normalizePlan(plan));
         } catch {
           clearAuthToken();
@@ -133,6 +151,8 @@ export default function App() {
     setUser(result.user);
     setD(result.plan ? normalizePlan(result.plan) : DEFAULTS);
     setTab("profile");
+    if (!ROUTES[window.location.hash]) window.location.hash = "#/family";
+    setPage(pageFromHash());
   }
   async function logout() {
     try { await api.logout(); } catch {}
@@ -141,7 +161,7 @@ export default function App() {
     setD(DEFAULTS);
   }
   async function savePlan() {
-    if (!user) return;
+    if (!user || isSaving) return;
 
     const cleanData = JSON.parse(JSON.stringify(d));
 
@@ -255,34 +275,43 @@ const kbList = useMemo(() => {
   if (!user) return (<><FontLink /><Auth t={t} lang={lang} setLang={setLang} onLogin={loginDone} /></>);
 
   const subTabs = [["profile", t.tabProfile], ["goals", t.tabGoals], ["results", t.tabResults]];
+  const navItems = [["family", "family", t.navFamily], ["calculator", "calculator", t.pageCalc], ["spending", "spending", t.pageSpend], ["reports", "reports", t.navReports], ["learn", "learn", t.pageLearn], ["manual", "manual", t.pageManual]];
+  const editablePage = page === "family" || page === "calculator" || page === "spending";
+  const SavePlanAction = ({ className = "" } = {}) => <div className={`qiwam-page-save ${className}`}><span aria-live="polite">{savedMsg ? t.saved : ""}</span><button className="qiwam-save-button" onClick={savePlan} disabled={isSaving}>{isSaving ? "…" : t.save}</button></div>;
 
-  return (<div dir={t.dir} style={{ minHeight: "100vh", background: C.bg, fontFamily: FONT, color: C.ink }}>
+  return (<div className={sidebarCollapsed ? "qiwam-app qiwam-sidebar-collapsed" : "qiwam-app"} dir={t.dir} lang={lang} style={{ minHeight: "100vh", background: C.bg, fontFamily: FONT, color: C.ink }}>
     <FontLink />
-    <header style={{ background: C.pine, color: "#fff" }}>
+    <header className="qiwam-mobile-header">
+      <button className="qiwam-mobile-menu" type="button" onClick={() => setNavOpen(true)} aria-label={t.openMenu}>☰</button>
+      <button onClick={() => go("family")} aria-label={t.navFamily} className="qiwam-mobile-brand"><QiwamLogo size={30} /><span>{t.brand}</span></button>
+      {editablePage && <SavePlanAction className="qiwam-mobile-save" />}
+    </header>
+    <header className="qiwam-topbar" style={{ background: C.pine, color: "#fff" }}>
       <div style={{ width: "100%", maxWidth: "min(1280px, 100%)", margin: "0 auto", padding: "clamp(12px, 2vw, 20px) clamp(16px, 3vw, 40px)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "clamp(10px, 2vw, 20px)" }}>
+        <button className="qiwam-mobile-menu" type="button" onClick={() => setNavOpen(true)} aria-label={t.openMenu} style={{ border: "1px solid rgba(255,255,255,.35)", background: "transparent", color: "#fff", borderRadius: 999, width: 38, height: 38, cursor: "pointer" }}>☰</button>
         <button onClick={() => go("calculator")} aria-label={t.pageCalc} style={{ display: "flex", alignItems: "center", gap: 10, border: "none", background: "transparent", color: "inherit", padding: 0, cursor: "pointer", fontFamily: FONT, textAlign: "start" }}><QiwamLogo size={38} /><div><div style={{ fontSize: 20, fontWeight: 700 }}>{t.brand}</div><div style={{ fontSize: 12, opacity: 0.8 }}>{t.welcome}، {user.name}</div></div></button>
-        <div className="qiwam-header-actions">{savedMsg && <span style={{ fontSize: 12.5, color: "#F4ECDD", fontWeight: 700 }}>{t.saved}</span>}<button className="qiwam-save-button" onClick={savePlan} disabled={isSaving} style={{ border: "none", background: C.gold, color: C.pine, borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, fontWeight: 700, cursor: isSaving ? "wait" : "pointer" }}>{isSaving ? "…" : t.save}</button><button onClick={openBackup} style={{ border: "1px solid rgba(255,255,255,.35)", background: "transparent", color: "#fff", borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.backupBtn}</button><button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ border: "1px solid rgba(255,255,255,.35)", background: "transparent", color: "#fff", borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.other}</button><button onClick={logout} style={{ border: "none", background: "rgba(255,255,255,.12)", color: "#fff", borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.logout}</button></div>
+        <div className="qiwam-header-actions">{savedMsg && <span style={{ fontSize: 12.5, color: "#F4ECDD", fontWeight: 700 }}>{t.saved}</span>}<button className="qiwam-save-button" onClick={savePlan} disabled={isSaving} style={{ border: "none", background: C.gold, color: C.pine, borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, fontWeight: 700, cursor: isSaving ? "wait" : "pointer" }}>{isSaving ? "…" : t.save}</button><button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ border: "1px solid rgba(255,255,255,.35)", background: "transparent", color: "#fff", borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.other}</button><button onClick={logout} style={{ border: "none", background: "rgba(255,255,255,.12)", color: "#fff", borderRadius: 999, padding: "6px 14px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.logout}</button></div>
       </div>
     </header>
-    <SaduBand />
-
-    <nav style={{ background: "#fff", borderBottom: `1px solid ${C.line}` }}>
-      <div className="qiwam-nav-scroll" style={{ width: "100%", maxWidth: "min(1280px, 100%)", margin: "0 auto", padding: "0 clamp(16px, 3vw, 40px)", display: "flex", gap: "clamp(4px, 1vw, 8px)" }}>
-        {[["calculator", t.pageCalc], ["spending", t.pageSpend], ["learn", t.pageLearn], ["manual", t.pageManual]].map(([k, label]) => (
-          <button className="qiwam-tab-button" key={k} onClick={() => go(k)} style={{ fontFamily: FONT, fontSize: "clamp(13px, 1.5vw, 15px)", fontWeight: page === k ? 700 : 500, cursor: "pointer", padding: "clamp(12px, 1.5vw, 16px) clamp(14px, 2vw, 20px)", border: "none", background: "none", color: page === k ? C.pine : C.sub, borderBottom: `3px solid ${page === k ? C.gold : "transparent"}`, whiteSpace: "nowrap" }}>{label}</button>
-        ))}
-      </div>
+    <nav className="qiwam-sidebar" aria-label={t.openMenu}>
+      <div className="qiwam-sidebar-brand"><button onClick={() => go("family")} aria-label={t.navFamily} className="qiwam-sidebar-brand-button"><QiwamLogo size={32} /><span className="qiwam-sidebar-label"><strong>{t.brand}</strong><small>{t.welcome}، {user.name}</small></span></button></div>
+      <div className="qiwam-sidebar-nav">{navItems.map(([key, icon, label]) => <button key={key} type="button" onClick={() => go(key)} className={page === key ? "qiwam-sidebar-item is-active" : "qiwam-sidebar-item"} aria-current={page === key ? "page" : undefined}><NavGlyph name={icon} /><span className="qiwam-sidebar-label">{label}</span></button>)}</div>
+      <div className="qiwam-sidebar-footer"><button type="button" onClick={() => setSidebarCollapsed((value) => !value)} className="qiwam-sidebar-footer-action qiwam-sidebar-collapse"><NavGlyph name="collapse" /><span className="qiwam-sidebar-label">{t.collapseMenu}</span></button><div className="qiwam-sidebar-footer-divider" /><button type="button" onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="qiwam-sidebar-footer-action"><NavGlyph name="language" /><span className="qiwam-sidebar-label">{t.other}</span></button><button type="button" onClick={logout} className="qiwam-sidebar-footer-action"><NavGlyph name="logout" /><span className="qiwam-sidebar-label">{t.logout}</span></button></div>
     </nav>
+    {navOpen && <div className="qiwam-drawer-backdrop" onClick={() => setNavOpen(false)}><aside className="qiwam-drawer" role="dialog" aria-modal="true" aria-label={t.openMenu} onClick={(e) => e.stopPropagation()}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px", borderBottom: `1px solid ${C.line}` }}><strong>{t.brand}</strong><button type="button" onClick={() => setNavOpen(false)} aria-label={t.closeMenu} style={{ border: "none", background: "none", fontSize: 22, cursor: "pointer" }}>×</button></div>{navItems.map(([k, , label]) => <button key={k} type="button" onClick={() => { go(k); setNavOpen(false); }} className="qiwam-drawer-item" aria-current={page === k ? "page" : undefined}>{label}</button>)}</aside></div>}
 
-    {backupOpen && (<section style={{ ...card, margin: "16px auto", maxWidth: "min(1280px, 100%)", borderColor: C.gold }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><h2 style={{ ...h2s, margin: 0 }}>{t.backupT}</h2><button onClick={() => setBackupOpen(false)} style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontFamily: FONT, fontSize: 12.5 }}>{t.cancelL} ✕</button></div><p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 10px", lineHeight: 1.7 }}>{t.backupHint}</p><textarea readOnly value={backupText} rows={4} onFocus={(e) => e.target.select()} style={{ width: "100%", boxSizing: "border-box", padding: 10, borderRadius: 8, border: `1px solid ${C.line}`, fontFamily: "monospace", fontSize: 11, resize: "vertical", background: "#FAFBFA" }} /><button onClick={copyBackup} style={{ marginTop: 8, background: C.gold, color: C.pine, border: "none", borderRadius: 8, padding: "9px 18px", fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{copied ? t.copiedMsg : t.copyBtn}</button></section>)}
 
-    {page === "calculator" && (<div className="qiwam-subtabs qiwam-nav-scroll" style={{ width: "100%", maxWidth: "min(1280px, 100%)", margin: "clamp(14px, 2vw, 24px) auto 0", padding: "8px clamp(16px, 3vw, 40px)", display: "flex", gap: "clamp(8px, 1.5vw, 16px)", flexWrap: "nowrap", alignItems: "center", background: "rgba(242,244,243,.82)" }}>{subTabs.map(([k, label]) => (<button className="qiwam-tab-button" key={k} onClick={() => setTab(k)} style={{ fontFamily: FONT, fontSize: 13.5, fontWeight: tab === k ? 700 : 500, cursor: "pointer", padding: "9px 18px", borderRadius: 999, border: `1px solid ${tab === k ? C.oasis : C.line}`, background: tab === k ? C.oasis : "#fff", color: tab === k ? "#fff" : C.ink, whiteSpace: "nowrap" }}>{label}</button>))}</div>)}
+    {page === "calculator" && (<div className="qiwam-subtabs qiwam-nav-scroll" style={{ display: "flex", gap: "clamp(8px, 1.5vw, 16px)", flexWrap: "nowrap", alignItems: "center" }}><div className="qiwam-save-status">{savedMsg && <span>{t.saved}</span>}<button className="qiwam-save-button" onClick={savePlan} disabled={isSaving}>{isSaving ? "…" : t.save}</button></div>{subTabs.map(([k, label]) => (<button className="qiwam-tab-button" key={k} onClick={() => setTab(k)} style={{ fontFamily: FONT, fontSize: 13.5, fontWeight: tab === k ? 700 : 500, cursor: "pointer", padding: "9px 18px", borderRadius: 999, border: `1px solid ${tab === k ? C.oasis : C.line}`, background: tab === k ? C.oasis : "#fff", color: tab === k ? "#fff" : C.ink, whiteSpace: "nowrap" }}>{label}</button>))}</div>)}
 
-    <main style={{ width: "100%", maxWidth: "min(1280px, 100%)", margin: "clamp(16px, 2vw, 24px) auto 60px", padding: "0 clamp(16px, 3vw, 40px)" }}>
+    <main className="qiwam-main" style={{ width: "100%", maxWidth: "min(1280px, 100%)", margin: "clamp(16px, 2vw, 24px) auto 60px", padding: "0 clamp(16px, 3vw, 40px)" }}>
       
+      {page === "family" && <SavePlanAction />}
+      {page === "family" && <FamilyExperience d={d} setD={setD} t={t} lang={lang} />} 
+      {page === "reports" && <ReportsExperience d={d} calc={calc} monthTx={monthTx} report={report} month={month} t={t} lang={lang} />} 
+
       {/* ---------------- PROFILE ---------------- */}
       {page === "calculator" && tab === "profile" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "clamp(12px, 2vw, 24px)" }}>
+        <div className="qiwam-profile-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
           <section style={card}><h2 style={h2s}>{t.incomeH}</h2><Field label={t.you} value={d.incYou} onChange={set("incYou")} suffix={t.sar} /><Field label={t.spouse} value={d.incSpouse} onChange={set("incSpouse")} suffix={t.sar} /><Field label={t.otherInc} value={d.incOther} onChange={set("incOther")} suffix={t.sar} /><CustomItems items={d.customIncome || []} t={t} addLabel={t.addIncome} onAdd={() => addItem("customIncome", { id: newId(), name: "", amount: 0 })} onUpd={(id, f) => updItem("customIncome", id, f)} onDel={(id) => delItem("customIncome", id)} /><h2 style={{ ...h2s, marginTop: 20 }}>{t.familyH}</h2><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: "clamp(6px, 1.5vw, 14px)" }}><Field label={t.age} value={d.age} onChange={set("age")} /><Field label={t.retireAge} value={d.retireAge} onChange={set("retireAge")} /><Field label={t.children} value={d.children} onChange={set("children")} /></div></section>
           <section style={card}><h2 style={h2s}>{t.expH}</h2><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "clamp(6px, 1.5vw, 14px)" }}><Field label={t.housing} value={d.housing} onChange={set("housing")} suffix={t.sar} /><Field label={t.transport} value={d.transport} onChange={set("transport")} suffix={t.sar} /><Field label={t.food} value={d.food} onChange={set("food")} suffix={t.sar} /><Field label={t.education} value={d.education} onChange={set("education")} suffix={t.sar} /><Field label={t.utilities} value={d.utilities} onChange={set("utilities")} suffix={t.sar} /><Field label={t.otherExp} value={d.otherExp} onChange={set("otherExp")} suffix={t.sar} /></div><CustomItems items={d.customExpense || []} t={t} addLabel={t.addExpense} onAdd={() => addItem("customExpense", { id: newId(), name: "", amount: 0 })} onUpd={(id, f) => updItem("customExpense", id, f)} onDel={(id) => delItem("customExpense", id)} /></section>
           <section style={card}><h2 style={h2s}>{t.debtH}</h2><Field label={t.debtPay} value={d.debtPay} onChange={set("debtPay")} suffix={t.sar} /><Field label={t.debtTotal} value={d.debtTotal} onChange={set("debtTotal")} suffix={t.sar} /><h2 style={{ ...h2s, marginTop: 20 }}>{t.wealthH}</h2><Field label={t.liquid} value={d.liquid} onChange={set("liquid")} suffix={t.sar} /><Field label={t.invested} value={d.invested} onChange={set("invested")} suffix={t.sar} /><h2 style={{ ...h2s, marginTop: 20 }}>{t.assumpH}</h2><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "clamp(6px, 1.5vw, 14px)" }}><Field label={t.ret} value={d.ret} onChange={set("ret")} /><Field label={t.inf} value={d.inf} onChange={set("inf")} /></div><Field label={t.growthL} value={d.salaryGrowth} onChange={set("salaryGrowth")} /></section>
@@ -290,7 +319,8 @@ const kbList = useMemo(() => {
       )}
 
       {/* ---------------- DAILY SPEND ---------------- */}
-      {page === "spending" && ( <div style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)" }}>
+      {page === "spending" && <SavePlanAction />}
+      {page === "spending" && ( <div className="qiwam-spending-experience" style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)" }}><LocalizedFixedChecklist setD={setD} t={t} /><section className="qiwam-spending-reserve" style={card}><label><input type="checkbox" checked={d.reserveGoals !== false} onChange={(event) => setD((previous) => ({ ...previous, reserveGoals: event.target.checked }))} />{t.reserveGoals}</label><span>{t.reservedLead}</span></section>
         <section style={{ ...card, background: C.pine, border: "none", color: "#fff" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: "clamp(12px, 2vw, 24px)", flexWrap: "wrap" }}>
             <div><div style={{ fontSize: 11.5, opacity: 0.75 }}>{hijriToday}{hijriToday ? " · " : ""}{todayISO()}</div><div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 12 }}>{t.heroLeft}</div><div style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 700, lineHeight: 1.15, fontVariantNumeric: "tabular-nums", color: remainingM < 0 ? "#F0A08C" : "#fff" }}>{fmt(remainingM, lang)} <span style={{ fontSize: 16, fontWeight: 500 }}>{t.sar}</span></div></div>
@@ -309,10 +339,13 @@ const kbList = useMemo(() => {
       </div>)}
 
       {/* ---------------- GOALS ---------------- */}
-      {page === "calculator" && tab === "goals" && (<section style={card}><h2 style={h2s}>{t.goalsH}</h2><p style={{ fontSize: 13, color: C.sub, marginTop: -6, marginBottom: 18 }}>{t.goalsNote}</p><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "clamp(12px, 2vw, 20px)" }}>{[["emergency", t.gEmergency], ["house", t.gHouse], ["edu", t.gEdu], ["hajj", t.gHajj], ["wedding", t.gWedding], ["car", t.gCar]].map(([k, label]) => { const g = d.goals[k]; return (<div key={k} style={{ border: `1px solid ${g.on ? C.oasis : C.line}`, borderRadius: 12, padding: 16, background: g.on ? "#fff" : "#FAFBFA" }}><label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, cursor: "pointer" }}><span style={{ fontWeight: 700, fontSize: 14.5 }}>{label}</span><span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>{t.enabled}<input type="checkbox" checked={g.on} onChange={(e) => setGoal(k, "on")(e.target.checked)} style={{ width: 17, height: 17, accentColor: C.oasis }} /></span></label><div style={{ opacity: g.on ? 1 : 0.45, pointerEvents: g.on ? "auto" : "none" }}><Field label={t.target} value={g.target} onChange={setGoal(k, "target")} suffix={t.sar} /><Field label={t.years} value={g.years} onChange={setGoal(k, "years")} /><Field label={t.alreadySaved} value={g.saved ?? 0} onChange={setGoal(k, "saved")} suffix={t.sar} />{k === "emergency" && <button onClick={() => setGoal("emergency", "saved")(num(d.liquid))} style={{ width: "100%", background: "transparent", color: C.oasis, border: `1px dashed ${C.oasis}`, borderRadius: 8, padding: "7px 0", fontFamily: FONT, fontSize: 11.5, fontWeight: 700, cursor: "pointer", marginBottom: 8 }}>{t.useLiquid} ({fmt(num(d.liquid), lang)})</button>}{num(g.saved) > 0 && num(g.saved) < num(g.target) && <p style={{ fontSize: 11, color: C.sub, margin: "0 0 6px" }}>{t.remainingGap}: <strong style={{ color: C.ink }}>{fmt(num(g.target) - num(g.saved), lang)} {t.sar}</strong></p>}{num(g.saved) >= num(g.target) && num(g.target) > 0 && <p style={{ fontSize: 11.5, color: C.good, fontWeight: 700, margin: "0 0 6px" }}>{t.goalDone}</p>}</div></div>); })}{(d.customGoals || []).map((g) => (<div key={g.id} style={{ border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 16, background: "#fff" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}><div style={{ flex: 1 }}><Field label={t.customGoalName} value={g.name} onChange={updItem("customGoals", g.id, "name")} type="text" /></div><button onClick={() => delItem("customGoals", g.id)} aria-label={t.remove} title={t.remove} style={{ width: 34, height: 40, marginTop: 8, borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", color: C.bad, cursor: "pointer", fontSize: 15, flexShrink: 0 }}>✕</button></div><Field label={t.target} value={g.target} onChange={updItem("customGoals", g.id, "target")} suffix={t.sar} /><Field label={t.years} value={g.years} onChange={updItem("customGoals", g.id, "years")} /><Field label={t.alreadySaved} value={g.saved ?? 0} onChange={updItem("customGoals", g.id, "saved")} suffix={t.sar} />{num(g.saved) >= num(g.target) && num(g.target) > 0 && <p style={{ fontSize: 11.5, color: C.good, fontWeight: 700, margin: 0 }}>{t.goalDone}</p>}</div>))}<button onClick={() => addItem("customGoals", { id: newId(), name: t.customGoalDefault, target: 50000, years: 5, saved: 0, on: true })} style={{ minHeight: 160, borderRadius: 12, border: `1.5px dashed ${C.oasis}`, background: "transparent", color: C.oasis, fontFamily: FONT, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>+ {t.addGoal}</button></div></section>)}
+      {page === "calculator" && tab === "goals" && <GoalsExperience d={d} setD={setD} calc={calc} t={t} lang={lang} />}
+      {page === "calculator" && tab === "goals" && <span className="qiwam-legacy-goal-sentinel" aria-hidden="true" />}
+      {page === "calculator" && tab === "goals" && <GoalReservePanel d={d} setD={setD} calc={calc} t={t} lang={lang} />}
+      {page === "calculator" && tab === "goals" && (<section style={card}><GoalContributionPanel d={d} setD={setD} calc={calc} t={t} /><h2 style={{ ...h2s, marginTop: 20 }}>{t.goalsH}</h2><p style={{ fontSize: 13, color: C.sub, marginTop: -6, marginBottom: 18 }}>{t.goalsNote}</p><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "clamp(12px, 2vw, 20px)" }}>{[["emergency", t.gEmergency], ["house", t.gHouse], ["edu", t.gEdu], ["hajj", t.gHajj], ["wedding", t.gWedding], ["car", t.gCar]].map(([k, label]) => { const g = d.goals[k]; return (<div key={k} style={{ border: `1px solid ${g.on ? C.oasis : C.line}`, borderRadius: 12, padding: 16, background: g.on ? "#fff" : "#FAFBFA" }}><label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, cursor: "pointer" }}><span style={{ fontWeight: 700, fontSize: 14.5 }}>{label}</span><span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.sub }}>{t.enabled}<input type="checkbox" checked={g.on} onChange={(e) => setGoal(k, "on")(e.target.checked)} style={{ width: 17, height: 17, accentColor: C.oasis }} /></span></label><div style={{ opacity: g.on ? 1 : 0.45, pointerEvents: g.on ? "auto" : "none" }}><Field label={t.target} value={g.target} onChange={setGoal(k, "target")} suffix={t.sar} /><Field label={t.years} value={g.years} onChange={setGoal(k, "years")} /><Field label={t.alreadySaved} value={g.saved ?? 0} onChange={setGoal(k, "saved")} suffix={t.sar} />{k === "emergency" && <button onClick={() => setGoal("emergency", "saved")(num(d.liquid))} style={{ width: "100%", background: "transparent", color: C.oasis, border: `1px dashed ${C.oasis}`, borderRadius: 8, padding: "7px 0", fontFamily: FONT, fontSize: 11.5, fontWeight: 700, cursor: "pointer", marginBottom: 8 }}>{t.useLiquid} ({fmt(num(d.liquid), lang)})</button>}{num(g.saved) > 0 && num(g.saved) < num(g.target) && <p style={{ fontSize: 11, color: C.sub, margin: "0 0 6px" }}>{t.remainingGap}: <strong style={{ color: C.ink }}>{fmt(num(g.target) - num(g.saved), lang)} {t.sar}</strong></p>}{num(g.saved) >= num(g.target) && num(g.target) > 0 && <p style={{ fontSize: 11.5, color: C.good, fontWeight: 700, margin: "0 0 6px" }}>{t.goalDone}</p>}</div></div>); })}{(d.customGoals || []).map((g) => (<div key={g.id} style={{ border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 16, background: "#fff" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}><div style={{ flex: 1 }}><Field label={t.customGoalName} value={g.name} onChange={updItem("customGoals", g.id, "name")} type="text" /></div><button onClick={() => delItem("customGoals", g.id)} aria-label={t.remove} title={t.remove} style={{ width: 34, height: 40, marginTop: 8, borderRadius: 10, border: `1px solid ${C.line}`, background: "#fff", color: C.bad, cursor: "pointer", fontSize: 15, flexShrink: 0 }}>✕</button></div><Field label={t.target} value={g.target} onChange={updItem("customGoals", g.id, "target")} suffix={t.sar} /><Field label={t.years} value={g.years} onChange={updItem("customGoals", g.id, "years")} /><Field label={t.alreadySaved} value={g.saved ?? 0} onChange={updItem("customGoals", g.id, "saved")} suffix={t.sar} />{num(g.saved) >= num(g.target) && num(g.target) > 0 && <p style={{ fontSize: 11.5, color: C.good, fontWeight: 700, margin: 0 }}>{t.goalDone}</p>}</div>))}<button onClick={() => addItem("customGoals", { id: newId(), name: t.customGoalDefault, target: 50000, years: 5, saved: 0, on: true })} style={{ minHeight: 160, borderRadius: 12, border: `1.5px dashed ${C.oasis}`, background: "transparent", color: C.oasis, fontFamily: FONT, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>+ {t.addGoal}</button></div></section>)}
 
       {/* ---------------- RESULTS ---------------- */}
-      {page === "calculator" && tab === "results" && (<div style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)" }}>
+      {page === "calculator" && tab === "results" && (<div className="qiwam-results-experience" style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)" }}>
         {showRecon && (<section style={{ ...card, background: C.goldSoft, borderColor: "#E4D6B8" }}><h2 style={{ ...h2s, marginBottom: 8 }}>{t.reconTitle}</h2><p style={{ fontSize: 13.5, lineHeight: 1.8, margin: "0 0 10px" }}>{t.reconBody.replace("{m}", fmt(tracked.months, lang)).replace("{a}", fmt(tracked.avg, lang)).replace("{e}", fmt(estExpenses, lang)).replace("{g}", fmt(Math.abs(reconGap), lang))}</p>{calcAlt && !usingActuals && <p style={{ fontSize: 13.5, margin: "0 0 12px" }}>{t.reconScore} <strong style={{ color: calcAlt.score < calc.score ? C.bad : C.good, fontSize: 17 }}>{calcAlt.score}</strong><span style={{ color: C.sub }}> ({t.scoreH}: {calc.score})</span></p>}<div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>{usingActuals ? <><span style={{ background: C.oasis, color: "#fff", borderRadius: 999, padding: "5px 14px", fontSize: 12, fontWeight: 700 }}>{t.usingActualsTag}</span><button onClick={() => setD((prev) => ({ ...prev, useActuals: false }))} style={{ border: `1px solid ${C.line}`, background: "#fff", color: C.ink, borderRadius: 999, padding: "7px 16px", fontFamily: FONT, fontSize: 12.5, cursor: "pointer" }}>{t.revertEst}</button></> : <button onClick={() => setD((prev) => ({ ...prev, useActuals: true }))} style={{ border: "none", background: C.pine, color: "#fff", borderRadius: 999, padding: "9px 20px", fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{t.useActualsBtn}</button>}</div><div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #E4D6B8" }}><div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}><span style={{ color: C.sub }}>{t.coverageL}: <strong style={{ color: lowCoverage ? C.bad : C.good }}>{pct(tracked.coverage * 100, lang)}</strong> {t.ofDays}</span><div style={{ flex: "1 1 90px", minWidth: 90, height: 6, borderRadius: 999, background: "#E4D6B8", overflow: "hidden" }}><div style={{ width: `${Math.min(100, tracked.coverage * 100)}%`, height: "100%", background: lowCoverage ? C.bad : C.oasis }} /></div></div>{tracked.partial && <p style={{ fontSize: 11.5, color: C.warn, margin: "6px 0 0", lineHeight: 1.6 }}>{t.partialNote}</p>}{lowCoverage && <p style={{ fontSize: 11.5, color: C.bad, margin: "6px 0 0", lineHeight: 1.6 }}>{t.lowCoverageWarn}</p>}{underLogged && <p style={{ fontSize: 11.5, color: C.bad, margin: "6px 0 0", lineHeight: 1.6 }}>{t.underLogWarn}</p>}<span style={{ display: "block", fontSize: 11.5, color: C.sub, margin: "10px 0 6px" }}>{t.exclH}</span><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{cats.map((c) => { const ex = (d.excludeRecon || []).includes(c.id); return (<button key={c.id} onClick={() => setD((prev) => ({ ...prev, excludeRecon: ex ? (prev.excludeRecon || []).filter((i) => i !== c.id) : [...(prev.excludeRecon || []), c.id] }))} style={{ fontFamily: FONT, fontSize: 11.5, cursor: "pointer", padding: "4px 10px", borderRadius: 999, border: `1px solid ${ex ? C.bad : C.line}`, background: ex ? "#FBEDE9" : "#fff", color: ex ? C.bad : C.ink, textDecoration: ex ? "line-through" : "none" }}>{catIcon(c)} {catName(c, t)}</button>); })}</div></div><p style={{ fontSize: 11.5, color: C.sub, margin: "10px 0 0", lineHeight: 1.6 }}>{t.reconNote}</p></section>)}
         
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))", gap: "clamp(12px, 2vw, 20px)", alignItems: "stretch" }}>
@@ -333,6 +366,7 @@ const kbList = useMemo(() => {
       {page === "spending" && (<div style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)", marginTop: 16 }}><section style={card}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}><h2 style={{ ...h2s, margin: 0 }}>{t.reportH}</h2><span style={{ fontSize: 12.5, color: C.sub }}>{t.monthL}: <strong style={{ color: C.ink }}>{month}</strong></span></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "clamp(8px, 1.5vw, 16px)", margin: "14px 0 18px" }}><Stat label={t.spentTotal} value={`${fmt(report.total, lang)} ${t.sar}`} /><Stat label={t.fixedShare} value={`${fmt(daily.fixedSpent, lang)} ${t.sar}`} /><Stat label={t.variableShare} value={`${fmt(daily.variable, lang)} ${t.sar}`} /><Stat label={t.avgDayL} value={`${fmt(daily.avg, lang)} ${t.sar}`} /><Stat label={t.topCatL} value={daily.topName} note={daily.topVal > 0 ? `${fmt(daily.topVal, lang)} ${t.sar}` : undefined} /><Stat label={t.targetsTotal} value={`${fmt(report.targetsTotal, lang)} ${t.sar}`} note={report.targetsTotal > 0 ? `${t.vsSpent}: ${pct((report.total / report.targetsTotal) * 100, lang)}` : undefined} tone={report.targetsTotal > 0 ? (report.total <= report.targetsTotal ? "good" : "bad") : undefined} /></div>{report.rowsR.length === 0 ? <p style={{ fontSize: 13.5, color: C.sub }}>{t.noTx}</p> : <div style={{ display: "grid", gap: 14 }}>{report.rowsR.map(({ c, spent, target }) => { const share = report.total > 0 ? (spent / report.total) * 100 : 0; const hasT = target > 0; const over = hasT && spent > target; const barColor = over ? C.bad : hasT ? C.oasis : C.gold; const barW = hasT ? Math.min(100, (spent / target) * 100) : share; return (<div key={c.id}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, gap: 8, flexWrap: "wrap" }}><span style={{ fontSize: 13.5, fontWeight: 700 }}>{catName(c, t)}<span style={{ fontWeight: 400, color: C.sub, fontSize: 12 }}> · {pct(share, lang)} {lang === "ar" ? "من الإجمالي" : "of total"}</span></span><span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums" }}><strong style={{ color: over ? C.bad : C.ink }}>{fmt(spent, lang)}</strong>{hasT && <span style={{ color: C.sub }}> / {fmt(target, lang)} {t.sar}</span>}{!hasT && <span style={{ color: C.sub }}> {t.sar}</span>}</span></div><div style={{ height: 10, borderRadius: 999, background: C.line, overflow: "hidden" }}><div style={{ width: `${Math.max(2, barW)}%`, height: "100%", borderRadius: 999, background: barColor, transition: "width .3s" }} /></div><div style={{ fontSize: 11, marginTop: 3, color: over ? C.bad : hasT ? C.good : C.sub }}>{hasT ? (over ? `${t.over} (+${fmt(spent - target, lang)} ${t.sar})` : t.within) : t.noTarget}</div></div>); })}</div>}</section><section style={card}><h2 style={h2s}>{t.targetsH}</h2><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "clamp(6px, 1.5vw, 16px) clamp(10px, 2vw, 24px)" }}>{cats.map((c) => (<Field key={c.id} label={catName(c, t)} value={(d.targets || {})[c.id] ?? ""} onChange={setTarget(c.id)} suffix={t.sar} />))}</div></section></div>)}
 
       {/* ---------------- KNOWLEDGE BASE ---------------- */}
+      {page === "learn" && <KnowledgeExperience entries={kbList} query={kbQuery} setQuery={setKbQuery} filter={kbFilter} setFilter={setKbFilter} open={kbOpen} setOpen={setKbOpen} t={t} lang={lang} />}
       {page === "learn" && (<div style={{ display: "grid", gap: "clamp(12px, 2vw, 24px)" }}>
         <section style={{ ...card, background: C.goldSoft, borderColor: "#E4D6B8" }}><h1 style={{ fontSize: "clamp(18px, 2.5vw, 24px)", fontWeight: 700, color: C.pine, margin: "0 0 8px" }}>{t.learnH}</h1><p style={{ fontSize: 13.5, color: C.ink, margin: 0, lineHeight: 1.8, maxWidth: 640 }}>{t.learnSub}</p></section>
         <section style={card}>
@@ -389,9 +423,8 @@ const kbList = useMemo(() => {
       </div>)}
 
       {/* ---------------- USER MANUAL ---------------- */}
-      {page === "manual" && (<div style={{ marginTop: "clamp(16px, 2vw, 24px)" }}><ManualContent /></div>)}
+      {page === "manual" && (<div style={{ marginTop: "clamp(16px, 2vw, 24px)" }}><GuideExperience t={t} lang={lang} go={go} /></div>)}
     </main>
-    <VersionFooter />
   </div>);
 }
 

@@ -1,0 +1,4 @@
+import React from "react";
+import { C, FONT, card, h2s } from "../theme/tokens";
+const uid=()=>`fixed_${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+export default function LocalizedFixedChecklist({setD,t}) { const items=[[t.fixedRent,"housing_c"],[t.fixedElectricity,"bills"],[t.fixedWater,"bills"],[t.fixedMobile,"bills"],[t.fixedSchool,"edu2"],[t.fixedInsurance,"bills"],[t.fixedLoan,"other2"]];const add=([name,cat])=>setD(p=>({...p,fixed:[...(p.fixed||[]),{id:uid(),name,cat,amount:"",dueDay:1}]}));return <section style={{...card,padding:16}}><h2 style={h2s}>{t.fixedTplH}</h2><p style={{color:C.sub,fontSize:12.5}}>{t.fixedTplLead}</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{items.map(item=><button key={item[0]} onClick={()=>add(item)} style={{border:`1px solid ${C.line}`,borderRadius:999,padding:"8px 12px",background:"#fff",color:C.oasis,fontFamily:FONT,cursor:"pointer"}}>+ {item[0]}</button>)}</div></section>; }
