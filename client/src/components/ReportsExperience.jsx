@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { C, FONT, card, h2s } from "../theme/tokens";
-import { catName, computeZakat, fmt, num, todayISO } from "../domain/planner";
+import { catName, fmt, num, todayISO } from "../domain/planner";
 
 const button = { border: "none", borderRadius: 999, padding: "8px 14px", fontFamily: FONT, fontSize: 12.5, fontWeight: 700, cursor: "pointer" };
 
@@ -30,7 +30,7 @@ export default function ReportsExperience({ d, calc, monthTx, report, month, t, 
   const cats = d.categories || [];
   const tx = d.tx || [];
   const selectedMonth = month || todayISO().slice(0, 7);
-  const z = useMemo(() => computeZakat(d.liquid, d.invested, d.goldPricePerGram), [d.liquid, d.invested, d.goldPricePerGram]);
+  
   const months = useMemo(() => Array.from({ length: range }, (_, index) => {
     const date = new Date();
     date.setDate(1);
@@ -47,14 +47,20 @@ export default function ReportsExperience({ d, calc, monthTx, report, month, t, 
     (monthTx || []).filter((item) => item.cat === category.id).reduce((sum, item) => sum + num(item.amount), 0),
     num((d.targets || {})[category.id]),
   ]), [cats, d.targets, monthTx, t]);
-  const titles = { monthly: t.repMonthly, goals: t.repGoals, trends: t.repTrends, family: t.repFamily, wealth: t.repWealth, zakat: t.repZakat };
+ const titles = {
+  monthly: t.repMonthly,
+  goals: t.repGoals,
+  trends: t.repTrends,
+  family: t.repFamily,
+  wealth: t.repWealth,
+};
   const reportChoices = [
     ["monthly", "📅", t.repMonthly, t.repMonthlyD],
     ["goals", "🎯", t.repGoals, t.repGoalsD],
     ["trends", "📈", t.repTrends, t.repTrendsD],
     ["family", "🎓", t.repFamily, t.repFamilyD],
     ["wealth", "🏦", t.repWealth, t.repWealthD],
-    ["zakat", "🕌", t.repZakat, t.repZakatD],
+   
   ];
   const Header = ({ csvRows, filename }) => <>
     <div className="qiwam-report-actions no-print">
@@ -118,11 +124,5 @@ export default function ReportsExperience({ d, calc, monthTx, report, month, t, 
     </section>;
   }
 
-  const head = [t.liquid, t.invested, t.zakatBase, t.zakatDue];
-  const rows = [[num(d.liquid), num(d.invested), z.zakatableWealth, z.zakatDue]];
-  return <section className="qiwam-report-detail" style={card}><Header filename="qiwam-zakat.csv" csvRows={[head, ...rows]} />
-    <Metrics items={[{ label: t.liquid, value: `${fmt(num(d.liquid), lang)} ${t.sar}` }, { label: t.invested, value: `${fmt(num(d.invested), lang)} ${t.sar}` }, { label: t.zakatBase, value: `${fmt(z.zakatableWealth, lang)} ${t.sar}` }, { label: t.zakatDue, value: `${fmt(z.zakatDue, lang)} ${t.sar}` }]} />
-    <ReportTable head={head} rows={rows} lang={lang} />
-    <p className="qiwam-report-note">{z.goldPricePerGram > 0 ? t.zakatHawlNote : t.zakatPriceNeeded}</p>
-  </section>;
+ return null;
 }

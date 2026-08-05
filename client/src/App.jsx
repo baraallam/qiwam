@@ -298,7 +298,78 @@ const kbList = useMemo(() => {
       <div className="qiwam-sidebar-nav">{navItems.map(([key, icon, label]) => <button key={key} type="button" onClick={() => go(key)} className={page === key ? "qiwam-sidebar-item is-active" : "qiwam-sidebar-item"} aria-current={page === key ? "page" : undefined}><NavGlyph name={icon} /><span className="qiwam-sidebar-label">{label}</span></button>)}</div>
       <div className="qiwam-sidebar-footer"><button type="button" onClick={() => setSidebarCollapsed((value) => !value)} className="qiwam-sidebar-footer-action qiwam-sidebar-collapse"><NavGlyph name="collapse" /><span className="qiwam-sidebar-label">{t.collapseMenu}</span></button><div className="qiwam-sidebar-footer-divider" /><button type="button" onClick={() => setLang(lang === "ar" ? "en" : "ar")} className="qiwam-sidebar-footer-action"><NavGlyph name="language" /><span className="qiwam-sidebar-label">{t.other}</span></button><button type="button" onClick={logout} className="qiwam-sidebar-footer-action"><NavGlyph name="logout" /><span className="qiwam-sidebar-label">{t.logout}</span></button></div>
     </nav>
-    {navOpen && <div className="qiwam-drawer-backdrop" onClick={() => setNavOpen(false)}><aside className="qiwam-drawer" role="dialog" aria-modal="true" aria-label={t.openMenu} onClick={(e) => e.stopPropagation()}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px", borderBottom: `1px solid ${C.line}` }}><strong>{t.brand}</strong><button type="button" onClick={() => setNavOpen(false)} aria-label={t.closeMenu} style={{ border: "none", background: "none", fontSize: 22, cursor: "pointer" }}>×</button></div>{navItems.map(([k, , label]) => <button key={k} type="button" onClick={() => { go(k); setNavOpen(false); }} className="qiwam-drawer-item" aria-current={page === k ? "page" : undefined}>{label}</button>)}</aside></div>}
+    {navOpen && (
+  <div
+    className="qiwam-drawer-backdrop"
+    onClick={() => setNavOpen(false)}
+  >
+    <aside
+      className="qiwam-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.openMenu}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "18px 20px",
+          borderBottom: `1px solid ${C.line}`,
+        }}
+      >
+        <strong>{t.brand}</strong>
+
+        <button
+          type="button"
+          onClick={() => setNavOpen(false)}
+          aria-label={t.closeMenu}
+          style={{
+            border: "none",
+            background: "none",
+            fontSize: 22,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {navItems.map(([k, , label]) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => {
+            go(k);
+            setNavOpen(false);
+          }}
+          className="qiwam-drawer-item"
+          aria-current={page === k ? "page" : undefined}
+        >
+          {label}
+        </button>
+      ))}
+
+      <button
+        type="button"
+        onClick={async () => {
+          setNavOpen(false);
+          await logout();
+        }}
+        className="qiwam-drawer-item"
+        style={{
+          marginTop: "12px",
+          color: "#b42318",
+          fontWeight: 700,
+          borderTop: `1px solid ${C.line}`,
+        }}
+      >
+        {t.logout}
+      </button>
+    </aside>
+  </div>
+)}
 
 
     {page === "calculator" && (<div className="qiwam-subtabs qiwam-nav-scroll" style={{ display: "flex", gap: "clamp(8px, 1.5vw, 16px)", flexWrap: "nowrap", alignItems: "center" }}><div className="qiwam-save-status">{savedMsg && <span>{t.saved}</span>}<button className="qiwam-save-button" onClick={savePlan} disabled={isSaving}>{isSaving ? "…" : t.save}</button></div>{subTabs.map(([k, label]) => (<button className="qiwam-tab-button" key={k} onClick={() => setTab(k)} style={{ fontFamily: FONT, fontSize: 13.5, fontWeight: tab === k ? 700 : 500, cursor: "pointer", padding: "9px 18px", borderRadius: 999, border: `1px solid ${tab === k ? C.oasis : C.line}`, background: tab === k ? C.oasis : "#fff", color: tab === k ? "#fff" : C.ink, whiteSpace: "nowrap" }}>{label}</button>))}</div>)}

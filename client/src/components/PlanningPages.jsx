@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { C, FONT, card, h2s } from "../theme/tokens";
 import { Field, Stat } from "./ui";
-import { computeZakat, fmt, num, todayISO } from "../domain/planner";
+import { fmt, num, todayISO } from "../domain/planner";
 
 const B={border:"none",borderRadius:9,padding:"9px 13px",background:C.oasis,color:"#fff",fontFamily:FONT,fontWeight:700,cursor:"pointer"};
 const G={...B,background:"#fff",color:C.oasis,border:`1px solid ${C.line}`};
@@ -21,5 +21,163 @@ export function FixedChecklist({setD,t}) {const items=[["Rent / mortgage","housi
 export function GoalContributionPanel({d,setD,calc,t}) {const [goalId,setGoalId]=useState(""),[amount,setAmount]=useState(""),[note,setNote]=useState("");const log=()=>{const v=num(amount);if(!goalId||v<=0)return;setD(p=>{const base={...p,goalContributions:[...(p.goalContributions||[]),{id:uid(),goalId,amount:v,date:todayISO(),note:note.trim()}]};return base.goals?.[goalId]?{...base,goals:{...base.goals,[goalId]:{...base.goals[goalId],saved:num(base.goals[goalId].saved)+v}}}:{...base,customGoals:(base.customGoals||[]).map(g=>g.id===goalId?{...g,saved:num(g.saved)+v}:g)}});setAmount("");setNote("")};return <section style={{...card,padding:16}}><h2 style={h2s}>{L(t,"logSaving","Log a goal saving")}</h2><div style={{display:"grid",gridTemplateColumns:"2fr 1fr 2fr auto",gap:8,alignItems:"end"}}><label style={{fontSize:12.5,color:C.sub}}>{t.gName}<select value={goalId} onChange={e=>setGoalId(e.target.value)} style={{display:"block",width:"100%",marginTop:5,padding:10,borderRadius:10,border:`1px solid ${C.line}`,fontFamily:FONT}}><option value="">—</option>{(calc.goals||[]).map(g=><option key={g.key} value={g.key}>{g.label}</option>)}</select></label><Field label={t.amount} value={amount} onChange={setAmount} suffix={t.sar}/><Field label={t.noteL} type="text" value={note} onChange={setNote}/><button style={B} onClick={log}>{L(t,"logSaving","Log saving")}</button></div></section>}
 
 const download=(rows)=>{const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`qiwam-report-${todayISO()}.csv`;a.click();URL.revokeObjectURL(a.href)};
-export function ZakatPanel({d,setD,zakat:given,t,lang}) {const z=given||computeZakat(d.liquid,d.invested,d.goldPricePerGram);return <section style={{...card,borderColor:C.gold,background:C.goldSoft}}><h2 style={h2s}>{L(t,"zakatH","Zakat estimate")}</h2>{setD&&<Field label={L(t,"goldPricePerGram","Current gold price per gram")} value={d.goldPricePerGram} onChange={v=>setD(p=>({...p,goldPricePerGram:v}))} suffix={t.sar}/>} {z.goldPricePerGram>0?<><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10}}><Stat label={L(t,"zakatableWealth","Zakatable wealth")} value={`${fmt(z.zakatableWealth,lang)} ${t.sar}`}/><Stat label={L(t,"nisabThreshold","Nisab threshold (85g gold)")} value={`${fmt(z.nisabThreshold,lang)} ${t.sar}`}/><Stat label={z.liable?L(t,"zakatDue","Zakat due"):L(t,"zakatStatus","Status")} value={z.liable?`${fmt(z.zakatDue,lang)} ${t.sar}`:L(t,"belowNisab","Below nisab")} tone={z.liable?"warn":"good"}/></div><p style={{fontSize:12,color:C.sub,lineHeight:1.65,marginBottom:0}}>{L(t,"zakatHawlNote","Educational estimate only; assumes this wealth has been held for a full Hijri year (hawl). The app does not track ownership duration—consult a qualified scholar.")}</p></>:<p style={{color:C.sub}}>{L(t,"zakatPriceNeeded","Enter today’s gold price per gram to calculate the nisab threshold.")}</p>}</section>}
-export function ReportsPage({d,setD,calc,monthTx,report,t,lang}) {const z=useMemo(()=>computeZakat(d.liquid,d.invested,d.goldPricePerGram),[d.liquid,d.invested,d.goldPricePerGram]);const trend=useMemo(()=>{const x={};(d.tx||[]).forEach(a=>{const k=(a.date||"").slice(0,7);if(k)x[k]=(x[k]||0)+num(a.amount)});return Object.entries(x).sort(([a],[b])=>a.localeCompare(b)).slice(-12).map(([month,spent])=>({month,spent:Math.round(spent)}))},[d.tx]);const out=()=>download([["Section","Metric","Value"],["Monthly","Income",calc.income],["Monthly","Tracked spending",report.total],["Goals","Required monthly",calc.goalsTotal],["Retirement","Projected",calc.atRetire],["Zakat","Zakatable wealth",z.zakatableWealth],["Zakat","Nisab threshold",z.nisabThreshold],["Zakat","Due",z.zakatDue],...(d.goalContributions||[]).map(x=>["Goal contribution",x.goalId,`${x.date}: ${x.amount}`])]);return <div style={{display:"grid",gap:18}}><section style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap"}}><div><h1 style={{...h2s,fontSize:24,marginBottom:4}}>{L(t,"reportsH","Family reports")}</h1><p style={{margin:0,color:C.sub,fontSize:13}}>{L(t,"reportsLead","A consolidated view built from your saved plan and activity.")}</p></div><button style={B} onClick={out}>{L(t,"exportCsv","Export CSV")}</button></section><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}><Stat label={t.heroIncome} value={`${fmt(calc.income,lang)} ${t.sar}`}/><Stat label={t.spentTotal} value={`${fmt(report.total,lang)} ${t.sar}`}/><Stat label={t.kSurplus} value={`${fmt(calc.surplus,lang)} ${t.sar}`} tone={calc.surplus>=0?"good":"bad"}/><Stat label={t.readiness} value={`${fmt(calc.readiness,lang)}%`}/></div><section style={card}><h2 style={h2s}>{L(t,"trendsH","Spending trend")}</h2>{trend.length?<div style={{height:250}} dir="ltr"><ResponsiveContainer><LineChart data={trend}><CartesianGrid stroke={C.line}/><XAxis dataKey="month"/><YAxis/><Tooltip/><Line type="monotone" dataKey="spent" stroke={C.oasis} strokeWidth={2}/></LineChart></ResponsiveContainer></div>:<p style={{color:C.sub}}>{t.noTx}</p>}</section><section style={card}><h2 style={h2s}>{t.goalsH}</h2>{(calc.goals||[]).map(g=><div key={g.key} style={{display:"flex",justifyContent:"space-between",gap:12,borderBottom:`1px solid ${C.line}`,paddingBottom:8,marginBottom:8}}><span>{g.label}</span><strong>{fmt(g.saved,lang)} / {fmt(g.target,lang)} {t.sar}</strong></div>)}</section><section style={card}><h2 style={h2s}>{L(t,"repFamily","Family & education")}</h2><p style={{color:C.sub,margin:0}}>{(d.familyMembers||[]).length} {L(t,"famCount","family members")} · {fmt(d.education,lang)} {t.sar} {t.perMonth} {t.education}</p></section><ZakatPanel d={d} setD={setD} zakat={z} t={t} lang={lang}/></div>}
+
+export function ReportsPage({ d, setD, calc, monthTx, report, t, lang }) {
+  const trend = useMemo(() => {
+    const x = {};
+
+    (d.tx || []).forEach((a) => {
+      const k = (a.date || "").slice(0, 7);
+
+      if (k) {
+        x[k] = (x[k] || 0) + num(a.amount);
+      }
+    });
+
+    return Object.entries(x)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, spent]) => ({
+        month,
+        spent: Math.round(spent),
+      }));
+  }, [d.tx]);
+
+  const out = () =>
+    download([
+      ["Section", "Metric", "Value"],
+      ["Monthly", "Income", calc.income],
+      ["Monthly", "Tracked spending", report.total],
+      ["Goals", "Required monthly", calc.goalsTotal],
+      ["Retirement", "Projected", calc.atRetire],
+      ...(d.goalContributions || []).map((x) => [
+        "Goal contribution",
+        x.goalId,
+        `${x.date}: ${x.amount}`,
+      ]),
+    ]);
+
+  return (
+    <div style={{ display: "grid", gap: 18 }}>
+      <section
+        style={{
+          ...card,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1 style={{ ...h2s, fontSize: 24, marginBottom: 4 }}>
+            {L(t, "reportsH", "Family reports")}
+          </h1>
+
+          <p style={{ margin: 0, color: C.sub, fontSize: 13 }}>
+            {L(
+              t,
+              "reportsLead",
+              "A consolidated view built from your saved plan and activity."
+            )}
+          </p>
+        </div>
+
+        <button style={B} onClick={out}>
+          {L(t, "exportCsv", "Export CSV")}
+        </button>
+      </section>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))",
+          gap: 12,
+        }}
+      >
+        <Stat
+          label={t.heroIncome}
+          value={`${fmt(calc.income, lang)} ${t.sar}`}
+        />
+
+        <Stat
+          label={t.spentTotal}
+          value={`${fmt(report.total, lang)} ${t.sar}`}
+        />
+
+        <Stat
+          label={t.kSurplus}
+          value={`${fmt(calc.surplus, lang)} ${t.sar}`}
+          tone={calc.surplus >= 0 ? "good" : "bad"}
+        />
+
+        <Stat
+          label={t.readiness}
+          value={`${fmt(calc.readiness, lang)}%`}
+        />
+      </div>
+
+      <section style={card}>
+        <h2 style={h2s}>
+          {L(t, "trendsH", "Spending trend")}
+        </h2>
+
+        {trend.length ? (
+          <div style={{ height: 250 }} dir="ltr">
+            <ResponsiveContainer>
+              <LineChart data={trend}>
+                <CartesianGrid stroke={C.line} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="spent"
+                  stroke={C.oasis}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p style={{ color: C.sub }}>{t.noTx}</p>
+        )}
+      </section>
+
+      <section style={card}>
+        <h2 style={h2s}>{t.goalsH}</h2>
+
+        {(calc.goals || []).map((g) => (
+          <div
+            key={g.key}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              borderBottom: `1px solid ${C.line}`,
+              paddingBottom: 8,
+              marginBottom: 8,
+            }}
+          >
+            <span>{g.label}</span>
+
+            <strong>
+              {fmt(g.saved, lang)} / {fmt(g.target, lang)} {t.sar}
+            </strong>
+          </div>
+        ))}
+      </section>
+
+      <section style={card}>
+        <h2 style={h2s}>
+          {L(t, "repFamily", "Family & education")}
+        </h2>
+
+        <p style={{ color: C.sub, margin: 0 }}>
+          {(d.familyMembers || []).length}{" "}
+          {L(t, "famCount", "family members")} ·{" "}
+          {fmt(d.education, lang)} {t.sar} {t.perMonth} {t.education}
+        </p>
+      </section>
+    </div>
+  );
+}
