@@ -108,6 +108,11 @@ function Auth({ t, lang, setLang, onLogin }) {
 export default function App() {
   const [lang, setLang] = useState("ar");
   const t = T[lang];
+   useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    document.documentElement.setAttribute("translate", "no");
+  }, [lang]);
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -206,9 +211,92 @@ export default function App() {
   const report = useMemo(() => { const byCat = {}; monthTx.forEach((x) => { byCat[x.cat] = (byCat[x.cat] || 0) + num(x.amount); }); const total = Object.values(byCat).reduce((a, b) => a + b, 0); const rowsR = cats.map((c) => ({ c, spent: byCat[c.id] || 0, target: num((d.targets || {})[c.id]) })).filter((r) => r.spent > 0 || r.target > 0).sort((a, b) => b.spent - a.spent); const targetsTotal = cats.reduce((a, c) => a + num((d.targets || {})[c.id]), 0); return { rowsR, total, targetsTotal }; }, [monthTx, cats, d.targets]);
 
   const [fxForm, setFxForm] = useState({ name: "", cat: "bills", amount: "", dueDay: 1 });
-  const daysIn = (m) => new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate();
-  const addFixed = () => { if (!fxForm.name.trim() || !(num(fxForm.amount) > 0)) return; const f = { id: newId(), name: fxForm.name.trim(), cat: fxForm.cat, amount: num(fxForm.amount), dueDay: Math.min(31, Math.max(1, num(fxForm.dueDay) || 1)) }; persist((p) => ({ ...p, fixed: [...(p.fixed || []), f] })); setFxForm({ name: "", cat: "bills", amount: "", dueDay: 1 }); };
-  const delFixed = (id) => persist((p) => ({ ...p, fixed: (p.fixed || []).filter((f) => f.id !== id) }));
+const [fxErr, setFxErr] = useState(null);
+
+const daysIn = (m) =>
+  new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate();
+
+const normName = (name) =>
+  (name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const findDuplicateFixed = (list, candidate) =>
+  (list || []).find(
+    (f) =>
+      normName(f.name) === normName(candidate.name) &&
+      f.cat === candidate.cat
+  );
+
+const addFixed = () => {
+  if (!fxForm.name.trim() || !(num(fxForm.amount) > 0)) return;
+
+  const duplicate = findDuplicateFixed(d.fixed, fxForm);
+
+  if (duplicate) {
+    setFxErr(duplicate.id);
+    return;
+  }
+
+  setFxErr(null);
+
+  const f = {
+    id: newId(),
+    name: fxForm.name.trim(),
+    cat: fxForm.cat,
+    amount: num(fxForm.amount),
+    dueDay: Math.min(
+      31,
+      Math.max(1, num(fxForm.dueDay) || 1)
+    ),
+  };
+
+  persist((p) => ({
+    ...p,
+    fixed: [...(p.fixed || []), f],
+  }));
+
+  setFxForm({
+    name: "",
+    cat: "bills",
+    amount: "",
+    dueDay: 1,
+  });
+};
+
+const updateDuplicateAmount = (id) => {
+  persist((p) => ({
+    ...p,
+    fixed: (p.fixed || []).map((f) =>
+      f.id === id
+        ? {
+            ...f,
+            amount: num(fxForm.amount),
+            dueDay: Math.min(
+              31,
+              Math.max(1, num(fxForm.dueDay) || 1)
+            ),
+          }
+        : f
+    ),
+  }));
+
+  setFxErr(null);
+
+  setFxForm({
+    name: "",
+    cat: "bills",
+    amount: "",
+    dueDay: 1,
+  });
+};
+
+const delFixed = (id) =>
+  persist((p) => ({
+    ...p,
+    fixed: (p.fixed || []).filter((f) => f.id !== id),
+  }));
   const paidThisMonth = (f) => monthTx.some((x) => x.fixedId === f.id);
   const markPaid = (f) => { if (paidThisMonth(f)) return; const day = Math.min(f.dueDay, daysIn(month)); const rec = { id: newId(), date: `${month}-${String(day).padStart(2, "0")}`, cat: f.cat, amount: f.amount, note: f.name, fixedId: f.id }; persist((p) => ({ ...p, tx: [...(p.tx || []), rec] })); };
   const fixedList = d.fixed || []; const fixedTotal = fixedList.reduce((a, f) => a + num(f.amount), 0);
@@ -404,7 +492,309 @@ const kbList = useMemo(() => {
           {!isCurrentMonth && (<p style={{ fontSize: 11, opacity: 0.75, margin: "8px 0 0", lineHeight: 1.6 }}>{t.pastMonthNote}</p>)}
         </section>
         <section style={card}><h2 style={{ ...h2s, marginBottom: 4 }}>{t.categoryL}</h2><p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px" }}>{t.tapHint}</p><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 140px), 1fr))", gap: "clamp(8px, 1.5vw, 14px)" }}>{cats.map((c) => { const spentC = catSpentMap[c.id] || 0; const tgt = num((d.targets || {})[c.id]); const overB = tgt > 0 && spentC > tgt; const active = quickCat === c.id; return (<div key={c.id} style={{ position: "relative" }}><button onClick={() => { setTxForm((f) => ({ ...f, cat: c.id, date: todayISO() })); setQuickCat(active ? null : c.id); setTxErr(""); }} style={{ width: "100%", textAlign: "start", fontFamily: FONT, cursor: "pointer", padding: "12px 12px 10px", borderRadius: 12, border: `1.5px solid ${active ? C.oasis : overB ? C.bad : C.line}`, background: active ? "#EFF6F3" : "#fff" }}><div style={{ fontSize: 21 }}>{catIcon(c)}</div><div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginTop: 4 }}>{catName(c, t)}</div><div style={{ fontSize: 12, color: overB ? C.bad : C.sub, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>{fmt(spentC, lang)}{tgt > 0 ? ` ${t.budgetOf} ${fmt(tgt, lang)}` : ""} {t.sar}</div>{tgt > 0 && <div style={{ height: 4, borderRadius: 999, background: C.line, overflow: "hidden", marginTop: 6 }}><div style={{ width: `${Math.min(100, (spentC / tgt) * 100)}%`, height: "100%", background: overB ? C.bad : C.oasis }} /></div>}</button>{(c.custom || !catHasTx(c.id)) && <button onClick={() => delCategory(c.id)} title={t.remove} style={{ position: "absolute", top: 6, insetInlineEnd: 6, border: "none", background: "none", color: C.bad, cursor: "pointer", fontSize: 11, padding: 2 }}>✕</button>}</div>); })}</div><div style={{ display: "flex", gap: 8, marginTop: 12 }}><input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder={t.newCat} style={{ flex: 1, padding: "9px 12px", borderRadius: 10, border: `1px dashed ${C.oasis}`, fontFamily: FONT, fontSize: 13.5, background: "transparent" }} /><button onClick={addCategory} style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: "0 14px", borderRadius: 10, border: "none", background: C.goldSoft, color: C.pine }}>{t.addCat}</button></div>{quickCat && (() => { const c = cats.find((cc) => cc.id === quickCat); if (!c) return null; return (<div style={{ marginTop: 14, padding: 16, borderRadius: 12, border: `1.5px solid ${C.oasis}`, background: "#F6FAF8" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}><span style={{ fontSize: 14, fontWeight: 700, color: C.pine }}>{t.quickFor}: {catIcon(c)} {catName(c, t)}</span><button onClick={() => setQuickCat(null)} style={{ border: "none", background: "none", color: C.sub, cursor: "pointer", fontFamily: FONT, fontSize: 12.5 }}>{t.cancelL} ✕</button></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: "0 12px" }}><Field label={t.amount} value={txForm.amount} onChange={(v) => setTxForm((f) => ({ ...f, amount: v }))} suffix={t.sar} /><label style={{ display: "block", marginBottom: 12 }}><span style={{ display: "block", fontSize: 12.5, color: C.sub, marginBottom: 5 }}>{t.dateL}</span><input type="date" value={txForm.date} onChange={(e) => setTxForm((f) => ({ ...f, date: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.line}`, fontFamily: FONT, fontSize: 14.5, background: "#fff" }} /></label><Field label={t.noteL} value={txForm.note} onChange={(v) => setTxForm((f) => ({ ...f, note: v }))} type="text" /></div>{txErr && <div style={{ color: C.bad, fontSize: 13, marginBottom: 8 }}>{txErr}</div>}<button onClick={() => { if (num(txForm.amount) > 0) { addTx(); setQuickCat(null); } else setTxErr(t.errAmount); }} style={{ width: "100%", background: C.oasis, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>{t.addTx}</button></div>); })()}</section>
-        <section style={card}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}><h2 style={h2s}>{t.fixedH}</h2><span style={{ fontSize: 12.5, color: C.sub }}>{t.fixedTotal}: <strong style={{ color: C.ink }}>{fmt(fixedTotal, lang)} {t.sar}</strong></span></div>{fixedList.length === 0 && <p style={{ fontSize: 13, color: C.sub }}>{t.noFixed}</p>}<div style={{ display: "grid", gap: 8, marginBottom: 16 }}>{fixedList.map((f) => { const paid = paidThisMonth(f); const overdue = !paid && isCurrentMonth && todayDay > f.dueDay; const c = cats.find((cc) => cc.id === f.cat); return (<div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1px solid ${paid ? C.line : overdue ? C.bad : C.gold}`, background: paid ? "#FAFBFA" : "#fff" }}><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13.5, fontWeight: 700 }}>{f.name}</div><div style={{ fontSize: 11.5, color: overdue ? C.bad : C.sub }}>{c ? catName(c, t) : "—"} · {overdue ? t.overdueTag : `${t.dueTag} ${fmt(f.dueDay, lang)}`}</div></div><div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmt(f.amount, lang)} {t.sar}</div>{paid ? <span style={{ fontSize: 11.5, color: C.good, fontWeight: 700, whiteSpace: "nowrap" }}>{t.paidTag}</span> : <button onClick={() => markPaid(f)} style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 999, border: "none", background: C.oasis, color: "#fff", whiteSpace: "nowrap" }}>{t.markPaid}</button>}<button onClick={() => delFixed(f.id)} title={t.remove} style={{ border: "none", background: "none", color: C.bad, cursor: "pointer", fontSize: 13, padding: 2 }}>✕</button></div>); })}</div><Field label={t.fixedNameL} value={fxForm.name} onChange={(v) => setFxForm((f) => ({ ...f, name: v }))} type="text" /><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}><Field label={t.amount} value={fxForm.amount} onChange={(v) => setFxForm((f) => ({ ...f, amount: v }))} suffix={t.sar} /><Field label={t.dueDayL} value={fxForm.dueDay} onChange={(v) => setFxForm((f) => ({ ...f, dueDay: v }))} /></div><span style={{ display: "block", fontSize: 12.5, color: C.sub, marginBottom: 6 }}>{t.categoryL}</span><div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>{cats.map((c) => (<button key={c.id} onClick={() => setFxForm((f) => ({ ...f, cat: c.id }))} style={{ fontFamily: FONT, fontSize: 12, cursor: "pointer", padding: "5px 11px", borderRadius: 999, border: `1px solid ${fxForm.cat === c.id ? C.gold : C.line}`, background: fxForm.cat === c.id ? C.goldSoft : "#fff", color: C.ink, fontWeight: fxForm.cat === c.id ? 700 : 400 }}>{catName(c, t)}</button>))}</div><button onClick={addFixed} style={{ width: "100%", background: "transparent", color: C.oasis, border: `1.5px dashed ${C.oasis}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>+ {t.addFixed}</button></section>
+       <section style={card}>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      flexWrap: "wrap",
+      gap: 8,
+    }}
+  >
+    <h2 style={h2s}>{t.fixedH}</h2>
+
+    <span style={{ fontSize: 12.5, color: C.sub }}>
+      {t.fixedTotal}:{" "}
+      <strong style={{ color: C.ink }}>
+        {fmt(fixedTotal, lang)} {t.sar}
+      </strong>
+    </span>
+  </div>
+
+  {fixedList.length === 0 && (
+    <p style={{ fontSize: 13, color: C.sub }}>{t.noFixed}</p>
+  )}
+
+  <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+    {fixedList.map((f) => {
+      const paid = paidThisMonth(f);
+      const overdue =
+        !paid && isCurrentMonth && todayDay > f.dueDay;
+
+      const c = cats.find((cc) => cc.id === f.cat);
+
+      return (
+        <div
+          key={f.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${
+              paid ? C.line : overdue ? C.bad : C.gold
+            }`,
+            background: paid ? "#FAFBFA" : "#fff",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+              {f.name}
+            </div>
+
+            <div
+              style={{
+                fontSize: 11.5,
+                color: overdue ? C.bad : C.sub,
+              }}
+            >
+              {c ? catName(c, t) : "—"} ·{" "}
+              {overdue
+                ? t.overdueTag
+                : `${t.dueTag} ${fmt(f.dueDay, lang)}`}
+            </div>
+          </div>
+
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {fmt(f.amount, lang)} {t.sar}
+          </div>
+
+          {paid ? (
+            <span
+              style={{
+                fontSize: 11.5,
+                color: C.good,
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {t.paidTag}
+            </span>
+          ) : (
+            <button
+              onClick={() => markPaid(f)}
+              style={{
+                fontFamily: FONT,
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: "6px 10px",
+                borderRadius: 999,
+                border: "none",
+                background: C.oasis,
+                color: "#fff",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {t.markPaid}
+            </button>
+          )}
+
+          <button
+            onClick={() => delFixed(f.id)}
+            title={t.remove}
+            style={{
+              border: "none",
+              background: "none",
+              color: C.bad,
+              cursor: "pointer",
+              fontSize: 13,
+              padding: 2,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      );
+    })}
+  </div>
+
+  {fxErr && (
+    <div
+      style={{
+        padding: "10px 12px",
+        borderRadius: 10,
+        background: C.goldSoft,
+        border: "1px solid #E4D6B8",
+        marginBottom: 10,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 12.5,
+          margin: "0 0 8px",
+          color: C.ink,
+        }}
+      >
+        {lang === "ar"
+          ? "يوجد مصروف ثابت بنفس الاسم والفئة بالفعل."
+          : "A fixed expense with the same name and category already exists."}
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => updateDuplicateAmount(fxErr)}
+          style={{
+            border: "none",
+            background: C.oasis,
+            color: "#fff",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontFamily: FONT,
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {lang === "ar"
+            ? "حدّث المبلغ الموجود"
+            : "Update existing amount"}
+        </button>
+
+        <button
+          onClick={() => setFxErr(null)}
+          style={{
+            border: `1px solid ${C.line}`,
+            background: "#fff",
+            color: C.sub,
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontFamily: FONT,
+            fontSize: 12,
+            cursor: "pointer",
+          }}
+        >
+          {t.cancelL}
+        </button>
+      </div>
+    </div>
+  )}
+
+  <Field
+    label={t.fixedNameL}
+    value={fxForm.name}
+    onChange={(v) =>
+      setFxForm((f) => ({
+        ...f,
+        name: v,
+      }))
+    }
+    type="text"
+  />
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+    }}
+  >
+    <Field
+      label={t.amount}
+      value={fxForm.amount}
+      onChange={(v) =>
+        setFxForm((f) => ({
+          ...f,
+          amount: v,
+        }))
+      }
+      suffix={t.sar}
+    />
+
+    <Field
+      label={t.dueDayL}
+      value={fxForm.dueDay}
+      onChange={(v) =>
+        setFxForm((f) => ({
+          ...f,
+          dueDay: v,
+        }))
+      }
+    />
+  </div>
+
+  <span
+    style={{
+      display: "block",
+      fontSize: 12.5,
+      color: C.sub,
+      marginBottom: 6,
+    }}
+  >
+    {t.categoryL}
+  </span>
+
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 6,
+      marginBottom: 14,
+    }}
+  >
+    {cats.map((c) => (
+      <button
+        key={c.id}
+        onClick={() =>
+          setFxForm((f) => ({
+            ...f,
+            cat: c.id,
+          }))
+        }
+        style={{
+          fontFamily: FONT,
+          fontSize: 12,
+          cursor: "pointer",
+          padding: "5px 11px",
+          borderRadius: 999,
+          border: `1px solid ${
+            fxForm.cat === c.id ? C.gold : C.line
+          }`,
+          background:
+            fxForm.cat === c.id ? C.goldSoft : "#fff",
+          color: C.ink,
+          fontWeight:
+            fxForm.cat === c.id ? 700 : 400,
+        }}
+      >
+        {catName(c, t)}
+      </button>
+    ))}
+  </div>
+
+  <button
+    onClick={addFixed}
+    style={{
+      width: "100%",
+      background: "transparent",
+      color: C.oasis,
+      border: `1.5px dashed ${C.oasis}`,
+      borderRadius: 10,
+      padding: "10px 0",
+      fontFamily: FONT,
+      fontSize: 13.5,
+      fontWeight: 700,
+      cursor: "pointer",
+    }}
+  >
+    + {t.addFixed}
+  </button>
+</section>
         <section style={card}><h2 style={h2s}>{t.dailyH}</h2><div dir="ltr" style={{ width: "100%", height: 240 }}><ResponsiveContainer><ComposedChart data={daily.series} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}><CartesianGrid stroke={C.line} strokeDasharray="3 3" vertical={false} /><XAxis dataKey="day" tick={{ fontFamily: FONT, fontSize: 10.5, fill: C.sub }} interval={2} /><YAxis yAxisId="l" tick={{ fontFamily: FONT, fontSize: 10.5, fill: C.sub }} width={46} tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "K" : v)} /><YAxis yAxisId="r" orientation="right" tick={{ fontFamily: FONT, fontSize: 10.5, fill: C.gold }} width={46} tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + "K" : v)} /><Tooltip formatter={(v, n) => [fmt(v, lang) + " " + t.sar, n]} labelFormatter={(l) => `${t.dayL} ${fmt(l, lang)}`} contentStyle={{ fontFamily: FONT, fontSize: 12, borderRadius: 10, border: `1px solid ${C.line}` }} /><Legend wrapperStyle={{ fontFamily: FONT, fontSize: 12 }} /><Bar yAxisId="l" dataKey="spent" name={t.perDayL} fill={C.oasis} radius={[4, 4, 0, 0]} /><Line yAxisId="r" type="monotone" dataKey="cum" name={t.cumulativeL} stroke={C.gold} strokeWidth={2.5} dot={false} /></ComposedChart></ResponsiveContainer></div></section>
         <section style={card}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}><h2 style={h2s}>{t.monthTx}</h2><span style={{ fontSize: 13, color: C.sub }}>{fmt(monthTx.length, lang)} {t.txCount} · <strong style={{ color: C.ink }}>{fmt(daily.total, lang)} {t.sar}</strong></span></div>{monthTx.length === 0 ? <p style={{ fontSize: 13.5, color: C.sub }}>{t.noTx}</p> : <div style={{ display: "grid", gap: 12, maxHeight: 480, overflowY: "auto" }}>{byDayList.map(([date, items]) => (<div key={date}><div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.sub, padding: "0 4px 5px", borderBottom: `1px solid ${C.line}`, marginBottom: 6 }}><span style={{ fontWeight: 700, color: C.pine }}>{date}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(items.reduce((a, x) => a + num(x.amount), 0), lang)} {t.sar}</span></div><div style={{ display: "grid", gap: 5 }}>{items.map((x) => { const c = cats.find((cc) => cc.id === x.cat); return (<div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: "#FAFBFA", border: `1px solid ${C.line}` }}><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{c ? catName(c, t) : "—"}{x.fixedId && <span style={{ fontSize: 10.5, color: C.gold, fontWeight: 700 }}> · {t.fixedShare}</span>}</div>{x.note && <div style={{ fontSize: 11.5, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.note}</div>}</div><div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmt(x.amount, lang)} {t.sar}</div><button onClick={() => delTx(x.id)} title={t.remove} style={{ border: "none", background: "none", color: C.bad, cursor: "pointer", fontSize: 13, padding: 3 }}>✕</button></div>); })}</div></div>))}</div>}</section>
       </div>)}

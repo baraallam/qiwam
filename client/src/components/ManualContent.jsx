@@ -321,7 +321,7 @@ export default function ManualContent() {
     <div class="legend">
       <div class="item"><span class="n">1</span><div><p class="ar">مقدمة الصفحة ورسالتها التعليمية.</p><p class="en">The page's introduction and educational promise.</p></div></div>
       <div class="item"><span class="n">2</span><div><p class="ar">البحث والتصفية: ابحث بأي كلمة — بالعربية أو الإنجليزية — أو صفِّ المحتوى بين «تعريفات» و«ممارسات».</p><p class="en">Search and filters: search any word — Arabic or English — or filter between Definitions and Practices.</p></div></div>
-      <div class="item"><span class="n">3</span><div><p class="ar">بطاقات المعرفة: وسم أخضر للتعريفات وذهبي للممارسات؛ اضغط أي بطاقة لتتوسع بالشرح، واضغطها ثانية لتنغلق. المحتوى مكتوب للسياق السعودي: الزكاة، والمرابحة والإجارة، والتأمينات ومكافأة نهاية الخدمة.</p><p class="en">Knowledge cards: a green tag for definitions, gold for practices; tap a card to expand, tap again to close. Content is written for the Saudi context: Zakat, murabaha &amp; ijara, GOSI and end-of-service.</p></div></div>
+      <div class="item"><span class="n">3</span><div><p class="ar">بطاقات المعرفة: وسم أخضر للتعريفات وذهبي للممارسات؛ اضغط أي بطاقة لتتوسع بالشرح، واضغطها ثانية لتنغلق. المحتوى مكتوب للسياق السعودي:  والمرابحة والإجارة، والتأمينات ومكافأة نهاية الخدمة.</p><p class="en">Knowledge cards: a green tag for definitions, gold for practices; tap a card to expand, tap again to close. Content is written for the Saudi context:  murabaha &amp; ijara, GOSI and end-of-service.</p></div></div>
     </div>
   </div>
 </div>

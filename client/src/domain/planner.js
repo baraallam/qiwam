@@ -38,7 +38,7 @@ export const DEFAULTS = {
   // above remain the source of truth for the established calculation engine.
   familyMembers: [],
   goalContributions: [],
-  goldPricePerGram: "",
+  
 };
 
 const CAT_ICONS = { housing_c: "🏠", food: "🍽️", groceries: "🛒", transport: "⛽", bills: "📱", shopping: "🛍️", health: "🩺", fun: "🎮", edu2: "🎓", other2: "📦" };
@@ -69,17 +69,7 @@ export function estExpensesOf(d) {
   return num(d.housing) + num(d.transport) + num(d.food) + num(d.education) + num(d.utilities) + num(d.otherExp) + customExp;
 }
 
-// Kept deliberately separate from computeAll: Zakat does not affect the
-// retirement, goals, expense, reconciliation, or score calculations.
-export function computeZakat(liquid, invested, goldPricePerGram) {
-  const zakatableWealth = Math.max(0, num(liquid)) + Math.max(0, num(invested));
-  const pricePerGram = Math.max(0, num(goldPricePerGram));
-  const nisabThreshold = pricePerGram * 85;
-  const liable = pricePerGram > 0 && zakatableWealth >= nisabThreshold;
-  const zakatDue = liable ? zakatableWealth * 0.025 : 0;
 
-  return { zakatableWealth, goldPricePerGram: pricePerGram, nisabThreshold, liable, zakatDue };
-}
 
 export function computeAll(d, expensesUsed, labels, t) {
   const customInc = (d.customIncome || []).reduce((a, i) => a + num(i.amount), 0);
